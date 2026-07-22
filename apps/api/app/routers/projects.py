@@ -65,7 +65,7 @@ def create_project(
             )
     res = (
         ctx.db.table("projects")
-        .insert({**body.model_dump(exclude_none=True), "workspace_id": ctx.workspace_id, "created_by": ctx.auth.user_id})
+        .insert({**body.model_dump(exclude_none=True, mode="json"), "workspace_id": ctx.workspace_id, "created_by": ctx.auth.user_id})
         .execute()
     )
     return res.data[0]
@@ -83,7 +83,7 @@ def update_project(
     ctx: WorkspaceContext = Depends(require_writer),
 ) -> dict:
     _get_or_404(ctx, project_id)
-    updates = body.model_dump(exclude_none=True)
+    updates = body.model_dump(exclude_none=True, mode="json")
     if not updates:
         return _get_or_404(ctx, project_id)
     res = (
