@@ -443,6 +443,10 @@ export type DashboardResponse = {
   upcoming_milestones: Milestone[];
   gravity_score: GravityScore;
   latest_ai_output: AiOutput | null;
+  project_count: number;
+  task_count: number;
+  catalogue_count: number;
+  has_release_plan: boolean;
 };
 
 export const dashboardApi = {

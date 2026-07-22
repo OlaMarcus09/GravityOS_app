@@ -9,6 +9,7 @@ import {
   Badge,
   Button,
   Card,
+  EmptyState,
   ErrorText,
   Field,
   Input,
@@ -120,6 +121,14 @@ export default function CalendarPage() {
 
       {isLoading && <Spinner />}
       <ErrorText error={error} />
+
+      {!isLoading && !error && data && data.events.length === 0 && (
+        <EmptyState
+          title="Nothing scheduled yet"
+          hint="Add your first session, release, or deadline to fill the calendar."
+          action={!isReadOnly && <Button onClick={() => openCreate()}>+ New event</Button>}
+        />
+      )}
 
       <Card style={{ padding: "0.5rem", overflow: "hidden" }}>
         <div className="cal-grid">

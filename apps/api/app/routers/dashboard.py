@@ -46,6 +46,22 @@ def get_dashboard(ctx: WorkspaceContext = Depends(get_workspace_context)) -> dic
         ctx.db.table("ai_outputs").select("*")
         .eq("workspace_id", ws).order("generated_at", desc=True).limit(1).execute().data or []
     )
+    project_count = (
+        ctx.db.table("projects").select("id", count="exact")
+        .eq("workspace_id", ws).execute().count or 0
+    )
+    task_count = (
+        ctx.db.table("tasks").select("id", count="exact")
+        .eq("workspace_id", ws).execute().count or 0
+    )
+    catalogue_count = (
+        ctx.db.table("catalogue_items").select("id", count="exact")
+        .eq("workspace_id", ws).execute().count or 0
+    )
+    has_release_plan = bool(
+        ctx.db.table("release_plans").select("id")
+        .eq("workspace_id", ws).limit(1).execute().data
+    )
 
     return {
         "tasks_due_today": due_today,
@@ -54,4 +70,8 @@ def get_dashboard(ctx: WorkspaceContext = Depends(get_workspace_context)) -> dic
         "upcoming_milestones": upcoming_milestones,
         "gravity_score": latest_score[0] if latest_score else None,
         "latest_ai_output": latest_ai[0] if latest_ai else None,
+        "project_count": project_count,
+        "task_count": task_count,
+        "catalogue_count": catalogue_count,
+        "has_release_plan": has_release_plan,
     }

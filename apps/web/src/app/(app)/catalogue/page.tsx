@@ -122,7 +122,11 @@ export default function CataloguePage() {
       {uploadError && <p style={{ color: "var(--danger)" }}>{uploadError}</p>}
 
       {data && data.length === 0 && (
-        <EmptyState title="No files yet" hint="Upload a master or stem to build your catalogue." />
+        <EmptyState
+          title="No files yet"
+          hint="Upload a master or stem to build your catalogue."
+          action={!isReadOnly && <Button onClick={() => setOpen(true)}>+ Add file</Button>}
+        />
       )}
 
       {data && data.length > 0 && (

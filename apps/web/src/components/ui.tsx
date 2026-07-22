@@ -186,11 +186,12 @@ export function PageHeader({
   );
 }
 
-export function EmptyState({ title, hint }: { title: string; hint?: string }) {
+export function EmptyState({ title, hint, action }: { title: string; hint?: string; action?: ReactNode }) {
   return (
     <Card style={{ padding: "2.5rem 1.5rem", textAlign: "center" }}>
       <p style={{ margin: 0, fontWeight: 600 }}>{title}</p>
       {hint && <p style={{ margin: "0.4rem 0 0", color: "var(--muted)" }}>{hint}</p>}
+      {action && <div style={{ marginTop: "1rem", display: "flex", justifyContent: "center" }}>{action}</div>}
     </Card>
   );
 }
