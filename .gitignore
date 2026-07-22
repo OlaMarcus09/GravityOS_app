@@ -1,0 +1,34 @@
+# Gravity OS — monorepo root ignores
+# Per-app ignores live in apps/web/.gitignore and apps/api/.gitignore;
+# these are repo-wide safety nets.
+
+# Secrets — never commit any env file (service-role key + JWT secret live here)
+.env
+.env.*
+!.env.example
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Agent / editor / OS
+.claude/
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Stray media dropped at repo root
+*.jpeg
+*.jpg
+*.png

@@ -1,0 +1,148 @@
+:root {
+  /* Surfaces — deep space */
+  --bg: #05060d;
+  --bg-2: #080a14;
+  --surface: rgba(19, 22, 38, 0.72);
+  --surface-solid: #12152a;
+  --surface-2: rgba(28, 32, 54, 0.68);
+  --surface-3: rgba(38, 43, 70, 0.6);
+  --border: rgba(120, 130, 190, 0.14);
+  --border-strong: rgba(140, 150, 210, 0.26);
+
+  /* Text */
+  --fg: #f3f4fb;
+  --muted: #9aa0c4;
+  --muted-2: #626890;
+
+  /* Brand + status — amber sun, cyan orbit */
+  --accent: #f5a524;
+  --accent-hover: #ffb948;
+  --accent-soft: rgba(245, 165, 36, 0.14);
+  --cyan: #38bdf8;
+  --cyan-soft: rgba(56, 189, 248, 0.14);
+  --violet: #a855f7;
+  --violet-soft: rgba(168, 85, 247, 0.16);
+  --success: #34d399;
+  --success-soft: rgba(52, 211, 153, 0.14);
+  --warning: #fbbf24;
+  --warning-soft: rgba(251, 191, 36, 0.14);
+  --danger: #fb5f76;
+  --danger-soft: rgba(251, 95, 118, 0.16);
+
+  /* Nebula gradients */
+  --nebula: radial-gradient(120% 120% at 20% 0%, rgba(168, 85, 247, 0.18), transparent 55%),
+    radial-gradient(120% 120% at 90% 20%, rgba(56, 189, 248, 0.14), transparent 50%),
+    radial-gradient(100% 100% at 60% 100%, rgba(245, 165, 36, 0.1), transparent 55%);
+  --glow-accent: 0 0 0 1px rgba(245, 165, 36, 0.35), 0 0 24px rgba(245, 165, 36, 0.28);
+  --glow-cyan: 0 0 24px rgba(56, 189, 248, 0.35);
+
+  /* Shape + motion */
+  --radius: 16px;
+  --radius-sm: 10px;
+  --radius-lg: 22px;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 16px 48px rgba(0, 0, 0, 0.4);
+  --ring: 0 0 0 3px var(--accent-soft);
+
+  --font-display: var(--font-space), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-body: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Starfield + nebula backdrop applied to the whole app */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background: var(--nebula), var(--bg);
+  background-attachment: fixed;
+}
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: radial-gradient(1px 1px at 20% 30%, rgba(255, 255, 255, 0.7), transparent),
+    radial-gradient(1px 1px at 70% 20%, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(1px 1px at 40% 70%, rgba(255, 255, 255, 0.55), transparent),
+    radial-gradient(1.5px 1.5px at 85% 60%, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(1px 1px at 55% 90%, rgba(255, 255, 255, 0.45), transparent),
+    radial-gradient(1px 1px at 10% 80%, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(1.5px 1.5px at 90% 90%, rgba(255, 255, 255, 0.5), transparent);
+  background-repeat: repeat;
+  background-size: 100% 100%;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+h1 {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+h2 {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.eyebrow {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+
+::placeholder {
+  color: var(--muted-2);
+}
+
+::selection {
+  background: var(--accent-soft);
+}
+
+/* Glass card — the core surface in the mockup */
+.glass {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+}

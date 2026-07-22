@@ -1,0 +1,17 @@
+-- Gravity OS — local seed data
+-- Intentionally minimal for the skeleton phase. Real fixtures come as we
+-- build each feature. Profiles are created by the auth trigger on signup,
+-- so seeding a workspace requires an existing auth user id.
+--
+-- To seed locally: sign up a user via the app, grab their id from
+-- auth.users, then run the block below with that id substituted.
+
+-- Example (commented out — replace <USER_ID> with a real auth.users id):
+--
+-- with ws as (
+--   insert into workspaces (name, owner_id, plan, type)
+--   values ('My Studio', '<USER_ID>', 'free', 'personal')
+--   returning id
+-- )
+-- insert into workspace_members (workspace_id, user_id, role, joined_at)
+-- select id, '<USER_ID>', 'owner', now() from ws;

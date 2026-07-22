@@ -1,0 +1,27 @@
+# Gravity OS — Render blueprint (ARCHITECTURE.md sections 1 & 4)
+# Hosts the FastAPI service as a Docker web service. The Next.js frontend
+# deploys to Vercel separately.
+services:
+  - type: web
+    name: gravity-os-api
+    runtime: docker
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: ./apps/api
+    healthCheckPath: /health
+    plan: starter
+    autoDeploy: true
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_JWT_SECRET
+        sync: false
+      - key: SUPABASE_JWT_AUD
+        value: authenticated
+      - key: CORS_ORIGINS
+        sync: false
+      - key: ENVIRONMENT
+        value: production
