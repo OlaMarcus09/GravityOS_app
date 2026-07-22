@@ -66,10 +66,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const displayName = me?.profile?.display_name ?? me?.email ?? "You";
   const role = memberships.find((m) => m.workspace_id === workspaceId)?.role;
 
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    router.replace("/login");
+  };
+
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
+    <div className="app-shell">
       <aside
-        className="glass"
+        className="glass app-sidebar"
         style={{
           width: 232,
           borderRadius: 0,
@@ -164,10 +169,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
           </div>
           <button
-            onClick={async () => {
-              await supabase.auth.signOut();
-              router.replace("/login");
-            }}
+            onClick={signOut}
             style={{
               background: "transparent",
               border: "1px solid var(--border-strong)",
@@ -183,7 +185,71 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <main style={{ flex: 1, padding: "2rem 2.25rem", maxWidth: 1240, width: "100%" }}>{children}</main>
+      <div className="app-content">
+        {/* Mobile-only top bar — carries brand, workspace switcher, sign-out. */}
+        <header className="mobile-topbar">
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", minWidth: 0 }}>
+            <GravityMark size={22} />
+            <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: "0.95rem", whiteSpace: "nowrap" }}>
+              Gravity OS
+            </span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", minWidth: 0 }}>
+            {memberships.length > 1 && (
+              <select
+                value={workspaceId ?? ""}
+                onChange={(e) => setWorkspaceId(e.target.value)}
+                style={{
+                  maxWidth: 130,
+                  padding: "0.35rem 0.4rem",
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "var(--radius-sm)",
+                  color: "var(--fg)",
+                  fontSize: "0.75rem",
+                }}
+              >
+                {memberships.map((m) => (
+                  <option key={m.workspace_id} value={m.workspace_id}>
+                    {m.workspaces?.name ?? m.workspace_id}
+                  </option>
+                ))}
+              </select>
+            )}
+            <button
+              onClick={signOut}
+              aria-label="Sign out"
+              style={{
+                background: "transparent",
+                border: "1px solid var(--border-strong)",
+                color: "var(--muted)",
+                padding: "0.35rem 0.6rem",
+                borderRadius: "var(--radius-sm)",
+                fontSize: "0.75rem",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Sign out
+            </button>
+          </div>
+        </header>
+
+        <main className="app-main">{children}</main>
+      </div>
+
+      {/* Mobile-only bottom tab bar — 7 icon tabs, active tab shows its label. */}
+      <nav className="mobile-tabbar">
+        {NAV.map((item) => {
+          const active = pathname === item.href || pathname.startsWith(item.href + "/");
+          return (
+            <Link key={item.href} href={item.href} className={`tab-item${active ? " active" : ""}`}>
+              <Icon path={item.icon} size={20} />
+              {active && <span className="tab-label">{item.label}</span>}
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 }

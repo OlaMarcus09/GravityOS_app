@@ -206,7 +206,7 @@ function BudgetForm({
       <Field label="Name">
         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Album rollout" autoFocus />
       </Field>
-      <div style={{ display: "flex", gap: "0.75rem" }}>
+      <div className="form-row">
         <Field label="Total amount">
           <Input type="number" min="0" step="0.01" value={total} onChange={(e) => setTotal(e.target.value)} placeholder="5000" />
         </Field>
@@ -254,7 +254,7 @@ function ItemForm({
 
   return (
     <>
-      <div style={{ display: "flex", gap: "0.75rem" }}>
+      <div className="form-row">
         <Field label="Category">
           <select
             value={category}
@@ -270,9 +270,7 @@ function ItemForm({
             }}
           >
             {CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
+              <option key={c} value={c}>{c}</option>
             ))}
           </select>
         </Field>
@@ -280,7 +278,7 @@ function ItemForm({
           <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Music video" autoFocus />
         </Field>
       </div>
-      <div style={{ display: "flex", gap: "0.75rem" }}>
+      <div className="form-row">
         <Field label="Planned">
           <Input type="number" min="0" step="0.01" value={planned} onChange={(e) => setPlanned(e.target.value)} />
         </Field>

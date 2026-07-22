@@ -207,7 +207,7 @@ function CampaignForm({
           ))}
         </Select>
       </Field>
-      <div style={{ display: "flex", gap: "0.75rem" }}>
+      <div className="form-row">
         <Field label="Start">
           <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
         </Field>
@@ -263,33 +263,27 @@ function ContentForm({
 
   return (
     <>
-      <div style={{ display: "flex", gap: "0.75rem" }}>
+      <div className="form-row">
         <Field label="Platform">
           <Select value={platform} onChange={(e) => setPlatform(e.target.value as typeof platform)}>
             {PLATFORMS.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
+              <option key={p} value={p}>{p}</option>
             ))}
           </Select>
         </Field>
         <Field label="Format">
           <Select value={format} onChange={(e) => setFormat(e.target.value as typeof format)}>
             {FORMATS.map((f) => (
-              <option key={f} value={f}>
-                {f}
-              </option>
+              <option key={f} value={f}>{f}</option>
             ))}
           </Select>
         </Field>
       </div>
-      <div style={{ display: "flex", gap: "0.75rem" }}>
+      <div className="form-row">
         <Field label="Status">
           <Select value={status} onChange={(e) => setStatus(e.target.value as typeof status)}>
             {CONTENT_STATUS.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
+              <option key={s} value={s}>{s}</option>
             ))}
           </Select>
         </Field>

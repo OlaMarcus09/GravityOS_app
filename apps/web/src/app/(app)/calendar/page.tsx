@@ -105,7 +105,7 @@ export default function CalendarPage() {
         action={!isReadOnly && <Button onClick={() => openCreate()}>+ New event</Button>}
       />
 
-      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem", flexWrap: "wrap" }}>
         <Button size="sm" variant="ghost" onClick={() => setMonth(addMonths(month, -1))}>
           ‹ Prev
         </Button>
@@ -122,7 +122,7 @@ export default function CalendarPage() {
       <ErrorText error={error} />
 
       <Card style={{ padding: "0.5rem", overflow: "hidden" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "0.35rem" }}>
+        <div className="cal-grid">
           {WEEKDAYS.map((w) => (
             <div
               key={w}
@@ -139,10 +139,9 @@ export default function CalendarPage() {
             return (
               <div
                 key={key}
+                className="cal-cell"
                 onClick={() => !isReadOnly && openCreate(key)}
                 style={{
-                  minHeight: 92,
-                  padding: "0.35rem 0.4rem",
                   borderRadius: "var(--radius-sm)",
                   border: isToday ? "1px solid var(--accent)" : "1px solid var(--border)",
                   background: inMonth ? "var(--surface-2)" : "transparent",
@@ -270,13 +269,11 @@ function EventForm({
       <Field label="Title">
         <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Studio session" autoFocus />
       </Field>
-      <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-end" }}>
+      <div className="form-row" style={{ alignItems: "flex-end" }}>
         <Field label="Type">
           <Select value={type} onChange={(e) => setType(e.target.value)}>
             {EVENT_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
+              <option key={t} value={t}>{t}</option>
             ))}
           </Select>
         </Field>
@@ -290,7 +287,7 @@ function EventForm({
           All day
         </label>
       </div>
-      <div style={{ display: "flex", gap: "0.75rem" }}>
+      <div className="form-row">
         <Field label="Starts">
           <Input type="datetime-local" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} />
         </Field>

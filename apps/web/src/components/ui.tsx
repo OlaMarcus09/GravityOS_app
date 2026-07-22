@@ -176,15 +176,7 @@ export function PageHeader({
   action?: ReactNode;
 }) {
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "flex-start",
-        justifyContent: "space-between",
-        gap: "1rem",
-        marginBottom: "1.5rem",
-      }}
-    >
+    <div className="page-head">
       <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
         <h1>{title}</h1>
         {subtitle && <p style={{ margin: 0, color: "var(--muted)" }}>{subtitle}</p>}

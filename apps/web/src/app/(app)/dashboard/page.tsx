@@ -41,7 +41,7 @@ export default function DashboardPage() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
         <div>
           <span className="eyebrow">Mission Control</span>
           <h1 style={{ marginTop: "0.3rem" }}>
@@ -68,7 +68,7 @@ export default function DashboardPage() {
       )}
 
       {!isLoading && !error && (
-        <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: "1.5rem" }}>
+        <div className="split-2" style={{ gap: "1.5rem" }}>
           {/* Active Orbit */}
           <Card style={{ padding: "1.5rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -132,7 +132,7 @@ export default function DashboardPage() {
 
       {/* Stat row */}
       {!isLoading && !error && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1.5rem" }}>
+        <div className="stat-grid" style={{ gap: "1.5rem" }}>
           <Card>
             <StatTile label="Due Today" value={dueToday.length} tone={dueToday.length ? "accent" : undefined} />
           </Card>

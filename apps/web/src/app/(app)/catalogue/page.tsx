@@ -235,27 +235,23 @@ function CatalogueForm({
       <Field label="Title">
         <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Track master v3" autoFocus />
       </Field>
-      <div style={{ display: "flex", gap: "0.75rem" }}>
+      <div className="form-row">
         <Field label="Kind">
           <Select value={kind} onChange={(e) => setKind(e.target.value as typeof kind)}>
             {KINDS.map((k) => (
-              <option key={k} value={k}>
-                {k}
-              </option>
+              <option key={k} value={k}>{k}</option>
             ))}
           </Select>
         </Field>
         <Field label="Status">
           <Select value={status} onChange={(e) => setStatus(e.target.value as typeof status)}>
             {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
+              <option key={s} value={s}>{s}</option>
             ))}
           </Select>
         </Field>
       </div>
-      <div style={{ display: "flex", gap: "0.75rem" }}>
+      <div className="form-row">
         <Field label="ISRC">
           <Input value={isrc} onChange={(e) => setIsrc(e.target.value)} placeholder="US-XXX-YY-NNNNN" />
         </Field>

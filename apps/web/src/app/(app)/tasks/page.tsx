@@ -189,22 +189,18 @@ function FormBody({
       <Field label="Description">
         <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
       </Field>
-      <div style={{ display: "flex", gap: "0.75rem" }}>
+      <div className="form-row">
         <Field label="Status">
           <Select value={status} onChange={(e) => setStatus(e.target.value as TaskStatus)}>
             {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s.replace("_", " ")}
-              </option>
+              <option key={s} value={s}>{s.replace("_", " ")}</option>
             ))}
           </Select>
         </Field>
         <Field label="Priority">
           <Select value={priority} onChange={(e) => setPriority(e.target.value as typeof priority)}>
             {PRIORITIES.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
+              <option key={p} value={p}>{p}</option>
             ))}
           </Select>
         </Field>

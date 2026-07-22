@@ -154,22 +154,18 @@ function ProjectForm({
       <Field label="Title">
         <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Untitled release" autoFocus />
       </Field>
-      <div style={{ display: "flex", gap: "0.75rem" }}>
+      <div className="form-row">
         <Field label="Type">
           <Select value={type} onChange={(e) => setType(e.target.value)}>
             {TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
+              <option key={t} value={t}>{t}</option>
             ))}
           </Select>
         </Field>
         <Field label="Status">
           <Select value={status} onChange={(e) => setStatus(e.target.value as ProjectStatus)}>
             {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s.replace("_", " ")}
-              </option>
+              <option key={s} value={s}>{s.replace("_", " ")}</option>
             ))}
           </Select>
         </Field>

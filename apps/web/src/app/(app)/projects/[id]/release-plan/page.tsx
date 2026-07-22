@@ -265,7 +265,7 @@ function MilestoneForm({
       <Field label="Title">
         <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Master delivered" autoFocus />
       </Field>
-      <div style={{ display: "flex", gap: "0.75rem" }}>
+      <div className="form-row">
         <Field label="Category">
           <Select value={category} onChange={(e) => setCategory(e.target.value as typeof category)}>
             {MILESTONE_CATEGORIES.map((c) => (
