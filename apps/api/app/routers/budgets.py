@@ -5,7 +5,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.core.deps import WorkspaceContext, get_workspace_context, require_writer
+from app.core.deps import WorkspaceContext, get_workspace_context, require_pro
 from app.schemas.budgets import BudgetCreate, BudgetItemCreate, BudgetItemUpdate, BudgetUpdate
 
 router = APIRouter(tags=["budgets"])
@@ -46,13 +46,13 @@ def list_budgets(
 
 
 @router.post("/budgets", status_code=status.HTTP_201_CREATED)
-def create_budget(body: BudgetCreate, ctx: WorkspaceContext = Depends(require_writer)) -> dict:
+def create_budget(body: BudgetCreate, ctx: WorkspaceContext = Depends(require_pro)) -> dict:
     res = ctx.db.table("budgets").insert({**body.model_dump(exclude_none=True, mode="json"), "workspace_id": ctx.workspace_id}).execute()
     return res.data[0]
 
 
 @router.patch("/budgets/{budget_id}")
-def update_budget(budget_id: str, body: BudgetUpdate, ctx: WorkspaceContext = Depends(require_writer)) -> dict:
+def update_budget(budget_id: str, body: BudgetUpdate, ctx: WorkspaceContext = Depends(require_pro)) -> dict:
     _get_budget_or_404(ctx, budget_id)
     updates = body.model_dump(exclude_none=True, mode="json")
     if not updates:
@@ -61,14 +61,14 @@ def update_budget(budget_id: str, body: BudgetUpdate, ctx: WorkspaceContext = De
 
 
 @router.post("/budgets/{budget_id}/items", status_code=status.HTTP_201_CREATED)
-def add_budget_item(budget_id: str, body: BudgetItemCreate, ctx: WorkspaceContext = Depends(require_writer)) -> dict:
+def add_budget_item(budget_id: str, body: BudgetItemCreate, ctx: WorkspaceContext = Depends(require_pro)) -> dict:
     _get_budget_or_404(ctx, budget_id)
     res = ctx.db.table("budget_items").insert({**body.model_dump(exclude_none=True, mode="json"), "budget_id": budget_id}).execute()
     return res.data[0]
 
 
 @router.patch("/budget-items/{item_id}")
-def update_budget_item(item_id: str, body: BudgetItemUpdate, ctx: WorkspaceContext = Depends(require_writer)) -> dict:
+def update_budget_item(item_id: str, body: BudgetItemUpdate, ctx: WorkspaceContext = Depends(require_pro)) -> dict:
     _get_item_or_404(ctx, item_id)
     updates = body.model_dump(exclude_none=True, mode="json")
     if not updates:
@@ -77,6 +77,6 @@ def update_budget_item(item_id: str, body: BudgetItemUpdate, ctx: WorkspaceConte
 
 
 @router.delete("/budget-items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_budget_item(item_id: str, ctx: WorkspaceContext = Depends(require_writer)) -> None:
+def delete_budget_item(item_id: str, ctx: WorkspaceContext = Depends(require_pro)) -> None:
     _get_item_or_404(ctx, item_id)
     ctx.db.table("budget_items").delete().eq("id", item_id).execute()

@@ -424,6 +424,38 @@ export function StatTile({
   );
 }
 
+// Upgrade banner — shown on Pro-gated pages for free-plan users.
+export function UpgradeBanner({ feature }: { feature: string }) {
+  return (
+    <div
+      className="glass"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: "1rem",
+        padding: "1rem 1.25rem",
+        marginBottom: "1.25rem",
+        border: "1px solid var(--accent)",
+        flexWrap: "wrap",
+      }}
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.2rem" }}>
+        <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>
+          Upgrade to Pro to unlock {feature}
+        </span>
+        <span style={{ fontSize: "0.78rem", color: "var(--muted)" }}>
+          Get unlimited projects, release planning, budgets, and more.
+        </span>
+      </div>
+      <a href="/settings" style={{ textDecoration: "none" }}>
+        <Button size="sm">Upgrade</Button>
+      </a>
+    </div>
+  );
+}
+
+
 // Circular avatar with initials fallback.
 export function Avatar({ name, src, size = 32 }: { name?: string | null; src?: string | null; size?: number }) {
   const initials = (name ?? "?")

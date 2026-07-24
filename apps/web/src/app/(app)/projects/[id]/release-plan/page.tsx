@@ -20,6 +20,7 @@ import {
   Select,
   Spinner,
   toneFor,
+  UpgradeBanner,
 } from "@/components/ui";
 
 const MILESTONE_CATEGORIES = ["production", "marketing", "distribution", "pr"] as const;
@@ -34,7 +35,7 @@ function milestonesOf(plan: ReleasePlan | null): Milestone[] {
 
 export default function ReleasePlanPage({ params }: { params: { id: string } }) {
   const projectId = params.id;
-  const { isReadOnly } = useWorkspace();
+  const { isReadOnly, plan: wsPlan } = useWorkspace();
   const { data: project } = useProject(projectId);
   const { data: plan, isLoading, error } = useReleasePlan(projectId);
   const { createPlan, updatePlan, addMilestone, updateMilestone, removeMilestone } =
@@ -71,6 +72,8 @@ export default function ReleasePlanPage({ params }: { params: { id: string } }) 
         title={project ? `${project.title} — Release plan` : "Release plan"}
         subtitle="Coordinate every milestone leading to release day."
       />
+
+      {wsPlan === "free" && <UpgradeBanner feature="Release Planner" />}
 
       {isLoading && <Spinner />}
       <ErrorText error={error} />

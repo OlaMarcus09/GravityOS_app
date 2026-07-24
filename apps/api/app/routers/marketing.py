@@ -5,7 +5,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.core.deps import WorkspaceContext, get_workspace_context, require_writer
+from app.core.deps import WorkspaceContext, get_workspace_context, require_pro
 from app.schemas.marketing import CampaignCreate, CampaignUpdate, ContentPieceCreate, ContentPieceUpdate
 
 router = APIRouter(tags=["marketing"])
@@ -42,13 +42,13 @@ def list_campaigns(
 
 
 @router.post("/campaigns", status_code=status.HTTP_201_CREATED)
-def create_campaign(body: CampaignCreate, ctx: WorkspaceContext = Depends(require_writer)) -> dict:
+def create_campaign(body: CampaignCreate, ctx: WorkspaceContext = Depends(require_pro)) -> dict:
     res = ctx.db.table("campaigns").insert({**body.model_dump(exclude_none=True, mode="json"), "workspace_id": ctx.workspace_id}).execute()
     return res.data[0]
 
 
 @router.patch("/campaigns/{campaign_id}")
-def update_campaign(campaign_id: str, body: CampaignUpdate, ctx: WorkspaceContext = Depends(require_writer)) -> dict:
+def update_campaign(campaign_id: str, body: CampaignUpdate, ctx: WorkspaceContext = Depends(require_pro)) -> dict:
     _get_campaign_or_404(ctx, campaign_id)
     updates = body.model_dump(exclude_none=True, mode="json")
     if not updates:
@@ -57,7 +57,7 @@ def update_campaign(campaign_id: str, body: CampaignUpdate, ctx: WorkspaceContex
 
 
 @router.post("/campaigns/{campaign_id}/content", status_code=status.HTTP_201_CREATED)
-def add_content(campaign_id: str, body: ContentPieceCreate, ctx: WorkspaceContext = Depends(require_writer)) -> dict:
+def add_content(campaign_id: str, body: ContentPieceCreate, ctx: WorkspaceContext = Depends(require_pro)) -> dict:
     _get_campaign_or_404(ctx, campaign_id)
     res = ctx.db.table("content_pieces").insert({
         **body.model_dump(exclude_none=True, mode="json"),
@@ -68,7 +68,7 @@ def add_content(campaign_id: str, body: ContentPieceCreate, ctx: WorkspaceContex
 
 
 @router.patch("/content/{content_id}")
-def update_content(content_id: str, body: ContentPieceUpdate, ctx: WorkspaceContext = Depends(require_writer)) -> dict:
+def update_content(content_id: str, body: ContentPieceUpdate, ctx: WorkspaceContext = Depends(require_pro)) -> dict:
     _get_content_or_404(ctx, content_id)
     updates = body.model_dump(exclude_none=True, mode="json")
     if not updates:
@@ -77,6 +77,6 @@ def update_content(content_id: str, body: ContentPieceUpdate, ctx: WorkspaceCont
 
 
 @router.delete("/content/{content_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_content(content_id: str, ctx: WorkspaceContext = Depends(require_writer)) -> None:
+def delete_content(content_id: str, ctx: WorkspaceContext = Depends(require_pro)) -> None:
     _get_content_or_404(ctx, content_id)
     ctx.db.table("content_pieces").delete().eq("id", content_id).eq("workspace_id", ctx.workspace_id).execute()

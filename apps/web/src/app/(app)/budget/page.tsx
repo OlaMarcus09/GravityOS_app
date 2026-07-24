@@ -16,6 +16,7 @@ import {
   Modal,
   PageHeader,
   Spinner,
+  UpgradeBanner,
 } from "@/components/ui";
 
 const CATEGORIES = ["production", "marketing", "visuals", "distribution", "other"] as const;
@@ -49,7 +50,7 @@ function itemsOf(b: BudgetWithItems): BudgetItem[] {
 }
 
 export default function BudgetPage() {
-  const { isReadOnly } = useWorkspace();
+  const { isReadOnly, plan } = useWorkspace();
   const { data, isLoading, error } = useBudgets();
   const { create, update, addItem, updateItem, removeItem } = useBudgetMutations();
 
@@ -80,8 +81,10 @@ export default function BudgetPage() {
       <PageHeader
         title="Budget"
         subtitle="Track spend against plan across your projects."
-        action={!isReadOnly && <Button onClick={openCreateBudget}>+ New budget</Button>}
+        action={!isReadOnly && plan !== "free" && <Button onClick={openCreateBudget}>+ New budget</Button>}
       />
+
+      {plan === "free" && <UpgradeBanner feature="Budget Planner" />}
 
       {isLoading && <Spinner />}
       <ErrorText error={error} />

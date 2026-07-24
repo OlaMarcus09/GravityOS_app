@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
 from app.routers import (
+    billing,
     budgets,
     calendar,
     catalogue,
@@ -56,6 +57,7 @@ def create_app() -> FastAPI:
         marketing,
         dashboard,
         intelligence,
+        billing,
     ):
         v1.include_router(module.router)
     app.include_router(v1)

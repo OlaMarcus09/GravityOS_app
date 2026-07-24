@@ -14,6 +14,7 @@ const STORAGE_KEY = "gravity.workspace_id";
 type WorkspaceState = {
   workspaceId: string | null;
   role: Membership["role"] | null;
+  plan: string;
   memberships: Membership[];
   isLoading: boolean;
   isReadOnly: boolean;
@@ -47,9 +48,15 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     [memberships, workspaceId],
   );
 
+  const plan = useMemo(
+    () => memberships.find((m) => m.workspace_id === workspaceId)?.workspaces?.plan ?? "free",
+    [memberships, workspaceId],
+  );
+
   const value: WorkspaceState = {
     workspaceId,
     role,
+    plan,
     memberships,
     isLoading,
     isReadOnly: role === "viewer",

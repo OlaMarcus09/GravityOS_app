@@ -83,6 +83,16 @@ def require_writer(ctx: WorkspaceContext = Depends(get_workspace_context)) -> Wo
     return ctx
 
 
+def require_pro(ctx: WorkspaceContext = Depends(require_writer)) -> WorkspaceContext:
+    """Block free-plan users from Pro/Team-only features."""
+    if ctx.plan == "free":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"error": {"code": "plan_required", "message": "This feature requires a Pro or Team plan"}},
+        )
+    return ctx
+
+
 def enforce_plan_limit(resource: str):
     """Factory: dependency that enforces a per-plan cap on `resource`.
 

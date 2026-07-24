@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     # CORS — the deployed Next.js origin(s), comma-separated.
     cors_origins: str = Field(default="http://localhost:3000", alias="CORS_ORIGINS")
 
+    # Stripe (placeholder until keys are configured)
+    stripe_secret_key: str = Field(default="", alias="STRIPE_SECRET_KEY")
+    stripe_webhook_secret: str = Field(default="", alias="STRIPE_WEBHOOK_SECRET")
+
     environment: str = Field(default="development", alias="ENVIRONMENT")
 
     @property

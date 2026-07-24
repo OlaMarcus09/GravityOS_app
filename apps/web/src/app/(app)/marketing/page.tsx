@@ -19,6 +19,7 @@ import {
   Textarea,
   Spinner,
   toneFor,
+  UpgradeBanner,
 } from "@/components/ui";
 
 const CAMPAIGN_OBJECTIVES = ["awareness", "engagement", "conversion", "release_hype"] as const;
@@ -35,7 +36,7 @@ function contentOf(c: CampaignWithContent): ContentPiece[] {
 }
 
 export default function MarketingPage() {
-  const { isReadOnly } = useWorkspace();
+  const { isReadOnly, plan } = useWorkspace();
   const { data, isLoading, error } = useCampaigns();
   const { create, update, addContent, removeContent } = useMarketingMutations();
 
@@ -66,8 +67,10 @@ export default function MarketingPage() {
       <PageHeader
         title="Marketing"
         subtitle="Plan campaigns and the content behind them."
-        action={!isReadOnly && <Button onClick={openCreate}>+ New campaign</Button>}
+        action={!isReadOnly && plan !== "free" && <Button onClick={openCreate}>+ New campaign</Button>}
       />
+
+      {plan === "free" && <UpgradeBanner feature="Marketing Planner" />}
 
       {isLoading && <Spinner />}
       <ErrorText error={error} />

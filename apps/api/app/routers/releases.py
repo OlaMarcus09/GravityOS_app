@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.core.deps import WorkspaceContext, get_workspace_context, require_writer
+from app.core.deps import WorkspaceContext, get_workspace_context, require_pro
 from app.schemas.releases import MilestoneCreate, MilestoneUpdate, ReleasePlanCreate, ReleasePlanUpdate
 
 router = APIRouter(tags=["releases"])
@@ -49,7 +49,7 @@ def get_release_plan(project_id: str, ctx: WorkspaceContext = Depends(get_worksp
 
 
 @router.post("/projects/{project_id}/release-plan", status_code=status.HTTP_201_CREATED)
-def create_release_plan(project_id: str, body: ReleasePlanCreate, ctx: WorkspaceContext = Depends(require_writer)) -> dict:
+def create_release_plan(project_id: str, body: ReleasePlanCreate, ctx: WorkspaceContext = Depends(require_pro)) -> dict:
     res = ctx.db.table("release_plans").insert({
         **body.model_dump(mode="json"),
         "project_id": project_id,
@@ -59,7 +59,7 @@ def create_release_plan(project_id: str, body: ReleasePlanCreate, ctx: Workspace
 
 
 @router.patch("/release-plans/{plan_id}")
-def update_release_plan(plan_id: str, body: ReleasePlanUpdate, ctx: WorkspaceContext = Depends(require_writer)) -> dict:
+def update_release_plan(plan_id: str, body: ReleasePlanUpdate, ctx: WorkspaceContext = Depends(require_pro)) -> dict:
     _get_plan_or_404(ctx, plan_id)
     updates = body.model_dump(exclude_none=True, mode="json")
     if not updates:
@@ -68,14 +68,14 @@ def update_release_plan(plan_id: str, body: ReleasePlanUpdate, ctx: WorkspaceCon
 
 
 @router.post("/release-plans/{plan_id}/milestones", status_code=status.HTTP_201_CREATED)
-def add_milestone(plan_id: str, body: MilestoneCreate, ctx: WorkspaceContext = Depends(require_writer)) -> dict:
+def add_milestone(plan_id: str, body: MilestoneCreate, ctx: WorkspaceContext = Depends(require_pro)) -> dict:
     _get_plan_or_404(ctx, plan_id)
     res = ctx.db.table("release_milestones").insert({**body.model_dump(exclude_none=True, mode="json"), "release_plan_id": plan_id}).execute()
     return res.data[0]
 
 
 @router.patch("/milestones/{milestone_id}")
-def update_milestone(milestone_id: str, body: MilestoneUpdate, ctx: WorkspaceContext = Depends(require_writer)) -> dict:
+def update_milestone(milestone_id: str, body: MilestoneUpdate, ctx: WorkspaceContext = Depends(require_pro)) -> dict:
     _get_milestone_or_404(ctx, milestone_id)
     updates = body.model_dump(exclude_none=True, mode="json")
     if not updates:
@@ -84,6 +84,6 @@ def update_milestone(milestone_id: str, body: MilestoneUpdate, ctx: WorkspaceCon
 
 
 @router.delete("/milestones/{milestone_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_milestone(milestone_id: str, ctx: WorkspaceContext = Depends(require_writer)) -> None:
+def delete_milestone(milestone_id: str, ctx: WorkspaceContext = Depends(require_pro)) -> None:
     _get_milestone_or_404(ctx, milestone_id)
     ctx.db.table("release_milestones").delete().eq("id", milestone_id).execute()
