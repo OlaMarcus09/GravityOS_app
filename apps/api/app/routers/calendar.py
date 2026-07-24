@@ -46,7 +46,19 @@ def get_calendar(
         tasks_q = tasks_q.lte("due_date", to[:10])
     tasks = tasks_q.execute().data or []
 
-    return {"events": events, "task_due_dates": tasks}
+    projects_q = (
+        ctx.db.table("projects")
+        .select("id,title,target_release_date,status,type")
+        .eq("workspace_id", ctx.workspace_id)
+        .not_.is_("target_release_date", "null")
+    )
+    if from_:
+        projects_q = projects_q.gte("target_release_date", from_[:10])
+    if to:
+        projects_q = projects_q.lte("target_release_date", to[:10])
+    project_releases = projects_q.execute().data or []
+
+    return {"events": events, "task_due_dates": tasks, "project_releases": project_releases}
 
 
 @router.post("/events", status_code=status.HTTP_201_CREATED)

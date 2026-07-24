@@ -43,10 +43,11 @@ export default function ProjectsPage() {
   };
 
   const submit = (body: ProjectInput) => {
-    const onSuccess = () => setOpen(false);
-    if (editing) update.mutate({ id: editing.id, body }, { onSuccess });
-    else create.mutate(body, { onSuccess });
+    const onSuccess = () => { setOpen(false); setMutationError(null); };
+    if (editing) update.mutate({ id: editing.id, body }, { onSuccess, onError: (e) => setMutationError(e) });
+    else create.mutate(body, { onSuccess, onError: (e) => setMutationError(e) });
   };
+  const [mutationError, setMutationError] = useState<Error | null>(null);
 
   return (
     <div>
@@ -108,13 +109,14 @@ export default function ProjectsPage() {
         </div>
       )}
 
-      <Modal open={open} onClose={() => setOpen(false)} title={editing ? "Edit project" : "New project"}>
+      <Modal open={open} onClose={() => { setOpen(false); setMutationError(null); }} title={editing ? "Edit project" : "New project"}>
         <ProjectForm
           key={editing?.id ?? "new"}
           initial={editing}
-          onCancel={() => setOpen(false)}
+          onCancel={() => { setOpen(false); setMutationError(null); }}
           onSubmit={submit}
           pending={create.isPending || update.isPending}
+          error={mutationError}
         />
       </Modal>
     </div>
@@ -126,11 +128,13 @@ function ProjectForm({
   onSubmit,
   onCancel,
   pending,
+  error,
 }: {
   initial: Project | null;
   onSubmit: (body: ProjectInput) => void;
   onCancel: () => void;
   pending: boolean;
+  error: Error | null;
 }) {
   const [title, setTitle] = useState(initial?.title ?? "");
   const [type, setType] = useState(initial?.type ?? "single");
@@ -176,6 +180,7 @@ function ProjectForm({
       <Field label="Description">
         <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
       </Field>
+      <ErrorText error={error} />
       <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "0.5rem" }}>
         <Button variant="ghost" onClick={onCancel}>
           Cancel

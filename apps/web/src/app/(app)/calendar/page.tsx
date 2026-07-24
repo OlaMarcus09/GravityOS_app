@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-import type { CalendarEvent, EventInput } from "@/lib/api";
+import type { CalendarEvent, CalendarProjectRelease, EventInput } from "@/lib/api";
 import { useCalendar, useCalendarMutations } from "@/lib/queries/useCalendar";
 import { useWorkspace } from "@/lib/workspace";
 import {
@@ -67,15 +67,16 @@ export default function CalendarPage() {
   const grid = useMemo(() => buildGrid(month), [month]);
   const todayIso = iso(new Date());
 
-  // Bucket events and task-due-dates by day for quick per-cell lookup.
+  // Bucket events, task-due-dates, and project releases by day for quick per-cell lookup.
   const byDay = useMemo(() => {
-    const map = new Map<string, { events: CalendarEvent[]; dues: string[] }>();
+    const map = new Map<string, { events: CalendarEvent[]; dues: string[]; releases: CalendarProjectRelease[] }>();
     const bump = (key: string) => {
-      if (!map.has(key)) map.set(key, { events: [], dues: [] });
+      if (!map.has(key)) map.set(key, { events: [], dues: [], releases: [] });
       return map.get(key)!;
     };
     data?.events.forEach((e) => bump(e.starts_at.slice(0, 10)).events.push(e));
     data?.task_due_dates.forEach((t) => bump(t.due_date).dues.push(t.title));
+    data?.project_releases?.forEach((p) => bump(p.target_release_date).releases.push(p));
     return map;
   }, [data]);
 
@@ -122,7 +123,7 @@ export default function CalendarPage() {
       {isLoading && <Spinner />}
       <ErrorText error={error} />
 
-      {!isLoading && !error && data && data.events.length === 0 && (
+      {!isLoading && !error && data && data.events.length === 0 && (data.project_releases?.length ?? 0) === 0 && (data.task_due_dates?.length ?? 0) === 0 && (
         <EmptyState
           title="Nothing scheduled yet"
           hint="Add your first session, release, or deadline to fill the calendar."
@@ -205,6 +206,25 @@ export default function CalendarPage() {
                     }}
                   >
                     ⚑ {title}
+                  </span>
+                ))}
+                {cell?.releases.map((p) => (
+                  <span
+                    key={`release-${p.id}`}
+                    title={`Release: ${p.title} (${p.type})`}
+                    style={{
+                      fontSize: "0.68rem",
+                      padding: "0.1rem 0.3rem",
+                      borderRadius: 4,
+                      background: "var(--accent-soft)",
+                      color: "var(--accent)",
+                      fontWeight: 600,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    ▸ {p.title}
                   </span>
                 ))}
               </div>

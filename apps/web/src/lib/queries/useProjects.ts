@@ -28,7 +28,10 @@ export function useProject(id: string | undefined) {
 export function useProjectMutations() {
   const ws = useWorkspaceId();
   const qc = useQueryClient();
-  const invalidate = () => qc.invalidateQueries({ queryKey: ["projects", ws] });
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["projects", ws] });
+    qc.invalidateQueries({ queryKey: ["calendar", ws] });
+  };
 
   const create = useMutation({
     mutationFn: (body: ProjectInput) => projectsApi.create(ws!, body),

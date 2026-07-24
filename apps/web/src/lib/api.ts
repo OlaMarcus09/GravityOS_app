@@ -179,9 +179,18 @@ export type CalendarTaskDue = {
   status: TaskStatus;
 };
 
+export type CalendarProjectRelease = {
+  id: string;
+  title: string;
+  target_release_date: string;
+  status: ProjectStatus;
+  type: string;
+};
+
 export type CalendarResponse = {
   events: CalendarEvent[];
   task_due_dates: CalendarTaskDue[];
+  project_releases: CalendarProjectRelease[];
 };
 
 export type EventInput = {
