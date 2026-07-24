@@ -20,7 +20,10 @@ export function useTasks(params?: Record<string, string>) {
 export function useTaskMutations() {
   const ws = useWorkspaceId();
   const qc = useQueryClient();
-  const invalidate = () => qc.invalidateQueries({ queryKey: ["tasks", ws] });
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["tasks", ws] });
+    qc.invalidateQueries({ queryKey: ["calendar", ws] });
+  };
 
   const create = useMutation({
     mutationFn: (body: TaskInput) => tasksApi.create(ws!, body),

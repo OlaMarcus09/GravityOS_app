@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-import type { CalendarEvent, CalendarProjectRelease, EventInput } from "@/lib/api";
+import type { CalendarCampaign, CalendarContent, CalendarEvent, CalendarMilestone, CalendarProjectRelease, EventInput } from "@/lib/api";
 import { useCalendar, useCalendarMutations } from "@/lib/queries/useCalendar";
 import { useWorkspace } from "@/lib/workspace";
 import {
@@ -67,16 +67,26 @@ export default function CalendarPage() {
   const grid = useMemo(() => buildGrid(month), [month]);
   const todayIso = iso(new Date());
 
-  // Bucket events, task-due-dates, and project releases by day for quick per-cell lookup.
+  // Bucket events, task-due-dates, project releases, campaigns, content, and milestones by day.
   const byDay = useMemo(() => {
-    const map = new Map<string, { events: CalendarEvent[]; dues: string[]; releases: CalendarProjectRelease[] }>();
+    const map = new Map<string, {
+      events: CalendarEvent[];
+      dues: string[];
+      releases: CalendarProjectRelease[];
+      campaigns: CalendarCampaign[];
+      content: CalendarContent[];
+      milestones: CalendarMilestone[];
+    }>();
     const bump = (key: string) => {
-      if (!map.has(key)) map.set(key, { events: [], dues: [], releases: [] });
+      if (!map.has(key)) map.set(key, { events: [], dues: [], releases: [], campaigns: [], content: [], milestones: [] });
       return map.get(key)!;
     };
     data?.events.forEach((e) => bump(e.starts_at.slice(0, 10)).events.push(e));
     data?.task_due_dates.forEach((t) => bump(t.due_date).dues.push(t.title));
     data?.project_releases?.forEach((p) => bump(p.target_release_date).releases.push(p));
+    data?.campaigns?.forEach((c) => bump(c.start_date).campaigns.push(c));
+    data?.scheduled_content?.forEach((c) => bump(c.scheduled_at.slice(0, 10)).content.push(c));
+    data?.milestones?.forEach((m) => bump(m.due_date).milestones.push(m));
     return map;
   }, [data]);
 
@@ -123,7 +133,7 @@ export default function CalendarPage() {
       {isLoading && <Spinner />}
       <ErrorText error={error} />
 
-      {!isLoading && !error && data && data.events.length === 0 && (data.project_releases?.length ?? 0) === 0 && (data.task_due_dates?.length ?? 0) === 0 && (
+      {!isLoading && !error && data && data.events.length === 0 && (data.project_releases?.length ?? 0) === 0 && (data.task_due_dates?.length ?? 0) === 0 && (data.campaigns?.length ?? 0) === 0 && (data.scheduled_content?.length ?? 0) === 0 && (data.milestones?.length ?? 0) === 0 && (
         <EmptyState
           title="Nothing scheduled yet"
           hint="Add your first session, release, or deadline to fill the calendar."
@@ -225,6 +235,60 @@ export default function CalendarPage() {
                     }}
                   >
                     ▸ {p.title}
+                  </span>
+                ))}
+                {cell?.campaigns.map((c) => (
+                  <span
+                    key={`campaign-${c.id}`}
+                    title={`Campaign: ${c.name} (${c.objective})`}
+                    style={{
+                      fontSize: "0.68rem",
+                      padding: "0.1rem 0.3rem",
+                      borderRadius: 4,
+                      background: "#e0f2fe",
+                      color: "#0369a1",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    ◆ {c.name}
+                  </span>
+                ))}
+                {cell?.content.map((c) => (
+                  <span
+                    key={`content-${c.id}`}
+                    title={`${c.platform} ${c.format}${c.caption ? `: ${c.caption}` : ""}`}
+                    style={{
+                      fontSize: "0.68rem",
+                      padding: "0.1rem 0.3rem",
+                      borderRadius: 4,
+                      background: "#fce7f3",
+                      color: "#be185d",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    ✦ {c.platform} {c.format}
+                  </span>
+                ))}
+                {cell?.milestones.map((m) => (
+                  <span
+                    key={`milestone-${m.id}`}
+                    title={`Milestone: ${m.title} (${m.category})`}
+                    style={{
+                      fontSize: "0.68rem",
+                      padding: "0.1rem 0.3rem",
+                      borderRadius: 4,
+                      background: "#f0fdf4",
+                      color: "#15803d",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    ● {m.title}
                   </span>
                 ))}
               </div>

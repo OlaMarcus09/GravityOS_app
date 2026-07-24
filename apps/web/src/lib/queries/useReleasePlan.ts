@@ -33,7 +33,10 @@ export function useReleasePlan(projectId: string) {
 export function useReleasePlanMutations(projectId: string) {
   const ws = useWorkspaceId();
   const qc = useQueryClient();
-  const invalidate = () => qc.invalidateQueries({ queryKey: ["release-plan", ws, projectId] });
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["release-plan", ws, projectId] });
+    qc.invalidateQueries({ queryKey: ["calendar", ws] });
+  };
 
   const createPlan = useMutation({
     mutationFn: (body: ReleasePlanInput) => releasesApi.create(ws!, projectId, body),

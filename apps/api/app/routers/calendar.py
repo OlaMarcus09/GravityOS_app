@@ -58,7 +58,53 @@ def get_calendar(
         projects_q = projects_q.lte("target_release_date", to[:10])
     project_releases = projects_q.execute().data or []
 
-    return {"events": events, "task_due_dates": tasks, "project_releases": project_releases}
+    # Marketing campaigns with start_date
+    campaigns_q = (
+        ctx.db.table("campaigns")
+        .select("id,name,start_date,end_date,status,objective,project_id")
+        .eq("workspace_id", ctx.workspace_id)
+        .not_.is_("start_date", "null")
+    )
+    if from_:
+        campaigns_q = campaigns_q.gte("start_date", from_[:10])
+    if to:
+        campaigns_q = campaigns_q.lte("start_date", to[:10])
+    campaigns = campaigns_q.execute().data or []
+
+    # Scheduled content pieces
+    content_q = (
+        ctx.db.table("content_pieces")
+        .select("id,caption,platform,format,scheduled_at,status,campaign_id")
+        .eq("workspace_id", ctx.workspace_id)
+        .not_.is_("scheduled_at", "null")
+    )
+    if from_:
+        content_q = content_q.gte("scheduled_at", from_)
+    if to:
+        content_q = content_q.lte("scheduled_at", to)
+    scheduled_content = content_q.execute().data or []
+
+    # Release milestones (join via release_plans to scope by workspace)
+    milestones_q = (
+        ctx.db.table("release_milestones")
+        .select("id,title,due_date,status,category,release_plan_id,release_plans!inner(workspace_id,project_id)")
+        .eq("release_plans.workspace_id", ctx.workspace_id)
+        .not_.is_("due_date", "null")
+    )
+    if from_:
+        milestones_q = milestones_q.gte("due_date", from_[:10])
+    if to:
+        milestones_q = milestones_q.lte("due_date", to[:10])
+    milestones = milestones_q.execute().data or []
+
+    return {
+        "events": events,
+        "task_due_dates": tasks,
+        "project_releases": project_releases,
+        "campaigns": campaigns,
+        "scheduled_content": scheduled_content,
+        "milestones": milestones,
+    }
 
 
 @router.post("/events", status_code=status.HTTP_201_CREATED)

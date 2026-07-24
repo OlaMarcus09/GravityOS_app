@@ -20,7 +20,10 @@ export function useCampaigns() {
 export function useMarketingMutations() {
   const ws = useWorkspaceId();
   const qc = useQueryClient();
-  const invalidate = () => qc.invalidateQueries({ queryKey: ["campaigns", ws] });
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["campaigns", ws] });
+    qc.invalidateQueries({ queryKey: ["calendar", ws] });
+  };
 
   const create = useMutation({
     mutationFn: (body: CampaignInput) => marketingApi.create(ws!, body),

@@ -187,10 +187,42 @@ export type CalendarProjectRelease = {
   type: string;
 };
 
+export type CalendarCampaign = {
+  id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+  status: string;
+  objective: string;
+  project_id: string | null;
+};
+
+export type CalendarContent = {
+  id: string;
+  caption: string | null;
+  platform: string;
+  format: string;
+  scheduled_at: string;
+  status: string;
+  campaign_id: string;
+};
+
+export type CalendarMilestone = {
+  id: string;
+  title: string;
+  due_date: string;
+  status: string;
+  category: string;
+  release_plan_id: string;
+};
+
 export type CalendarResponse = {
   events: CalendarEvent[];
   task_due_dates: CalendarTaskDue[];
   project_releases: CalendarProjectRelease[];
+  campaigns: CalendarCampaign[];
+  scheduled_content: CalendarContent[];
+  milestones: CalendarMilestone[];
 };
 
 export type EventInput = {
