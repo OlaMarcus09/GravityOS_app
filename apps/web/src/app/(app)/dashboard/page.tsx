@@ -3,7 +3,7 @@
 import Link from "next/link";
 
 import { Button, Card, EmptyState, OrbitMap, ScoreGauge, Spinner, StatTile } from "@/components/ui";
-import { useDashboard } from "@/lib/queries/useDashboard";
+import { useDashboard, useComputeScore } from "@/lib/queries/useDashboard";
 import { useMe } from "@/lib/queries/useMe";
 
 // Dashboard — "Mission Control". Aggregates the day's priorities, the Gravity
@@ -31,9 +31,11 @@ const ORBIT_STAGES = [
 export default function DashboardPage() {
   const { data: me } = useMe();
   const { data, isLoading, error } = useDashboard();
+  const computeScore = useComputeScore();
 
   const name = me?.profile?.display_name?.split(" ")[0] ?? "there";
-  const score = data?.gravity_score?.score ?? 0;
+  const gs = data?.gravity_score;
+  const score = gs?.overall ?? 0;
 
   const projectCount = data?.project_count ?? 0;
   const taskCount = data?.task_count ?? 0;
@@ -69,8 +71,24 @@ export default function DashboardPage() {
           <div>
             <div className="eyebrow">Gravity Score</div>
             <div style={{ fontSize: "0.8rem", color: "var(--muted)", marginTop: "0.2rem" }}>
-              {score > 0 ? "Career health" : "Create a project to start your score"}
+              {score > 0 ? "Career health" : "Compute your first score"}
             </div>
+            <button
+              onClick={() => computeScore.mutate()}
+              disabled={computeScore.isPending}
+              style={{
+                marginTop: "0.35rem",
+                background: "transparent",
+                border: "1px solid var(--border-strong)",
+                color: "var(--accent)",
+                padding: "0.25rem 0.5rem",
+                borderRadius: "var(--radius-sm)",
+                fontSize: "0.72rem",
+                cursor: "pointer",
+              }}
+            >
+              {computeScore.isPending ? "Computing..." : "Recalculate"}
+            </button>
           </div>
         </Card>
       </div>
@@ -238,6 +256,36 @@ export default function DashboardPage() {
             <StatTile label="Milestones" value={milestones.length} tone="success" />
           </Card>
         </div>
+      )}
+
+      {/* Gravity Score Breakdown */}
+      {!isLoading && !error && gs && (
+        <Card style={{ padding: "1.5rem" }}>
+          <span className="eyebrow">Gravity Score Breakdown</span>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: "1rem", marginTop: "1rem" }}>
+            {([
+              ["Consistency", gs.consistency, "var(--accent)"],
+              ["Organization", gs.organization, "var(--cyan)"],
+              ["Execution", gs.execution, "var(--success)"],
+              ["Marketing", gs.marketing, "#e879f9"],
+              ["Collaboration", gs.collaboration, "var(--violet)"],
+              ["Business", gs.business_readiness, "#fb923c"],
+            ] as const).map(([label, val, color]) => (
+              <div key={label} style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem" }}>
+                  <span style={{ color: "var(--muted)" }}>{label}</span>
+                  <span style={{ fontWeight: 600 }}>{val}</span>
+                </div>
+                <div style={{ height: 6, borderRadius: 999, background: "var(--surface-3)", overflow: "hidden" }}>
+                  <div style={{ width: `${val}%`, height: "100%", background: color, transition: "width 300ms ease" }} />
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ fontSize: "0.72rem", color: "var(--muted-2)", marginTop: "0.75rem" }}>
+            Last computed {new Date(gs.computed_at).toLocaleString()}
+          </div>
+        </Card>
       )}
 
       {!isLoading && !error && !data?.gravity_score && dueToday.length === 0 && events.length === 0 && (

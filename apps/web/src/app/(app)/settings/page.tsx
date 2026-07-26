@@ -1,10 +1,22 @@
 "use client";
 
-import Link from "next/link";
+import { useEffect, useState } from "react";
 
-import { useMe } from "@/lib/queries/useMe";
+import { useMe, useProfileMutation } from "@/lib/queries/useMe";
 import { useWorkspace } from "@/lib/workspace";
-import { Badge, Button, Card, PageHeader } from "@/components/ui";
+import { Badge, Button, Card, ErrorText, Field, Input, PageHeader, Select } from "@/components/ui";
+
+const CREATIVE_ROLES = [
+  "artist",
+  "producer",
+  "songwriter",
+  "engineer",
+  "manager",
+  "designer",
+  "videographer",
+  "dj",
+  "other",
+] as const;
 
 const PLAN_FEATURES: Record<string, { label: string; features: string[] }> = {
   free: {
@@ -43,8 +55,41 @@ const PLAN_FEATURES: Record<string, { label: string; features: string[] }> = {
 export default function SettingsPage() {
   const { data: me } = useMe();
   const { plan } = useWorkspace();
+  const mutation = useProfileMutation();
+
+  const [displayName, setDisplayName] = useState("");
+  const [creativeRole, setCreativeRole] = useState("");
+  const [timezone, setTimezone] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  // Seed form from server data
+  useEffect(() => {
+    if (me?.profile) {
+      setDisplayName(me.profile.display_name ?? "");
+      setCreativeRole(me.profile.creative_role ?? "");
+      setTimezone(me.profile.timezone ?? "");
+    }
+  }, [me?.profile]);
+
+  const dirty =
+    displayName !== (me?.profile?.display_name ?? "") ||
+    creativeRole !== (me?.profile?.creative_role ?? "") ||
+    timezone !== (me?.profile?.timezone ?? "");
+
+  const save = () => {
+    setSaved(false);
+    mutation.mutate(
+      {
+        display_name: displayName.trim() || undefined,
+        creative_role: creativeRole || undefined,
+        timezone: timezone || undefined,
+      },
+      { onSuccess: () => setSaved(true) },
+    );
+  };
 
   const current = PLAN_FEATURES[plan] ?? PLAN_FEATURES.free;
+  const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   return (
     <div>
@@ -53,10 +98,42 @@ export default function SettingsPage() {
       {/* Profile */}
       <Card style={{ padding: "1.5rem", marginBottom: "1.5rem" }}>
         <span className="eyebrow">Profile</span>
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", marginTop: "0.75rem" }}>
-          <Row label="Display name" value={me?.profile?.display_name ?? "—"} />
-          <Row label="Email" value={me?.email ?? "—"} />
-          <Row label="Creative role" value={me?.profile?.creative_role ?? "—"} />
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginTop: "0.75rem" }}>
+          <Field label="Email">
+            <Input value={me?.email ?? ""} disabled />
+          </Field>
+          <Field label="Display name">
+            <Input
+              value={displayName}
+              onChange={(e) => { setDisplayName(e.target.value); setSaved(false); }}
+              placeholder="Your name"
+            />
+          </Field>
+          <Field label="Creative role">
+            <Select
+              value={creativeRole}
+              onChange={(e) => { setCreativeRole(e.target.value); setSaved(false); }}
+            >
+              <option value="">Select a role</option>
+              {CREATIVE_ROLES.map((r) => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Timezone">
+            <Input
+              value={timezone}
+              onChange={(e) => { setTimezone(e.target.value); setSaved(false); }}
+              placeholder={userTz}
+            />
+          </Field>
+          <ErrorText error={mutation.error} />
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <Button onClick={save} disabled={!dirty || mutation.isPending}>
+              {mutation.isPending ? "Saving..." : "Save changes"}
+            </Button>
+            {saved && <span style={{ fontSize: "0.82rem", color: "var(--success)" }}>Saved</span>}
+          </div>
         </div>
       </Card>
 
@@ -95,15 +172,6 @@ export default function SettingsPage() {
           </p>
         )}
       </Card>
-    </div>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem", fontSize: "0.85rem" }}>
-      <span style={{ color: "var(--muted)", fontWeight: 550 }}>{label}</span>
-      <span>{value}</span>
     </div>
   );
 }

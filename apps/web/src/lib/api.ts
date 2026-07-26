@@ -84,6 +84,17 @@ export function getMe() {
   return apiFetch<MeResponse>("/me");
 }
 
+export type ProfileInput = {
+  display_name?: string;
+  creative_role?: string;
+  timezone?: string;
+  avatar_url?: string;
+};
+
+export function updateProfile(body: ProfileInput) {
+  return apiFetch<MeResponse>("/me", { method: "PATCH", body });
+}
+
 // --- Tasks -----------------------------------------------------------------
 
 export type TaskStatus = "todo" | "in_progress" | "blocked" | "done";
@@ -465,7 +476,13 @@ export const releasesApi = {
 export type GravityScore = {
   id: string;
   workspace_id: string;
-  score: number;
+  overall: number;
+  consistency: number;
+  organization: number;
+  execution: number;
+  marketing: number;
+  collaboration: number;
+  business_readiness: number;
   computed_at: string;
 } | null;
 
@@ -492,4 +509,9 @@ export type DashboardResponse = {
 
 export const dashboardApi = {
   get: (ws: string) => apiFetch<DashboardResponse>("/dashboard", { workspaceId: ws }),
+};
+
+export const gravityScoreApi = {
+  compute: (ws: string) =>
+    apiFetch<NonNullable<GravityScore>>("/gravity-score/compute", { method: "POST", workspaceId: ws }),
 };

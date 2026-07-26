@@ -1,8 +1,8 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { dashboardApi } from "@/lib/api";
+import { dashboardApi, gravityScoreApi } from "@/lib/api";
 import { useWorkspaceId } from "@/lib/workspace";
 
 // Dashboard aggregate: tasks due/overdue, upcoming events + milestones,
@@ -13,5 +13,14 @@ export function useDashboard() {
     queryKey: ["dashboard", ws],
     queryFn: () => dashboardApi.get(ws!),
     enabled: !!ws,
+  });
+}
+
+export function useComputeScore() {
+  const ws = useWorkspaceId();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => gravityScoreApi.compute(ws!),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["dashboard", ws] }),
   });
 }
