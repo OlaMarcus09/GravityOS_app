@@ -39,12 +39,24 @@ const NAV = [
   { href: "/settings", label: "Settings", icon: "M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" },
 ];
 
+const SIDEBAR_KEY = "gravity.sidebar_collapsed";
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [ready, setReady] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem(SIDEBAR_KEY) === "1";
+  });
   const { memberships, workspaceId, setWorkspaceId } = useWorkspace();
   const { data: me } = useMe();
+
+  const toggleSidebar = () => {
+    const next = !collapsed;
+    setCollapsed(next);
+    localStorage.setItem(SIDEBAR_KEY, next ? "1" : "0");
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -77,28 +89,77 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <aside
         className="glass app-sidebar"
         style={{
-          width: 232,
+          width: collapsed ? 64 : 232,
           borderRadius: 0,
           borderTop: "none",
           borderBottom: "none",
           borderLeft: "none",
-          padding: "1.5rem 0.9rem",
+          padding: collapsed ? "1.5rem 0.5rem" : "1.5rem 0.9rem",
           display: "flex",
           flexDirection: "column",
           gap: "0.25rem",
           position: "sticky",
           top: 0,
           height: "100vh",
+          transition: "width 200ms ease, padding 200ms ease",
+          overflow: "hidden",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "0.55rem", padding: "0 0.4rem", marginBottom: "1.5rem" }}>
-          <GravityMark size={26} />
-          <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, letterSpacing: "-0.01em" }}>
-            Gravity OS
-          </span>
+        {/* Brand + collapse toggle */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "space-between", padding: collapsed ? "0" : "0 0.4rem", marginBottom: "1.5rem", minHeight: 26 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.55rem", overflow: "hidden" }}>
+            <GravityMark size={26} />
+            {!collapsed && (
+              <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, letterSpacing: "-0.01em", whiteSpace: "nowrap" }}>
+                Gravity OS
+              </span>
+            )}
+          </div>
+          {!collapsed && (
+            <button
+              onClick={toggleSidebar}
+              aria-label="Collapse sidebar"
+              title="Collapse sidebar"
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "var(--muted)",
+                cursor: "pointer",
+                padding: "0.2rem",
+                display: "flex",
+                alignItems: "center",
+                flexShrink: 0,
+              }}
+            >
+              <Icon path="M15 18l-6-6 6-6" size={16} />
+            </button>
+          )}
         </div>
 
-        {memberships.length > 1 && (
+        {/* Expand button when collapsed */}
+        {collapsed && (
+          <button
+            onClick={toggleSidebar}
+            aria-label="Expand sidebar"
+            title="Expand sidebar"
+            style={{
+              background: "transparent",
+              border: "none",
+              color: "var(--muted)",
+              cursor: "pointer",
+              padding: "0.4rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              marginBottom: "0.5rem",
+            }}
+          >
+            <Icon path="M9 18l6-6-6-6" size={16} />
+          </button>
+        )}
+
+        {/* Workspace switcher — hidden when collapsed */}
+        {!collapsed && memberships.length > 1 && (
           <select
             value={workspaceId ?? ""}
             onChange={(e) => setWorkspaceId(e.target.value)}
@@ -127,61 +188,75 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
+                title={collapsed ? item.label : undefined}
                 style={{
                   display: "flex",
                   alignItems: "center",
+                  justifyContent: collapsed ? "center" : "flex-start",
                   gap: "0.7rem",
                   color: active ? "var(--fg)" : "var(--muted)",
                   background: active ? "var(--accent-soft)" : "transparent",
                   boxShadow: active ? "inset 2px 0 0 var(--accent)" : "none",
-                  padding: "0.55rem 0.7rem",
+                  padding: collapsed ? "0.55rem" : "0.55rem 0.7rem",
                   borderRadius: "var(--radius-sm)",
                   fontSize: "0.875rem",
                   fontWeight: active ? 600 : 500,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
                 }}
               >
-                <span style={{ color: active ? "var(--accent)" : "var(--muted-2)" }}>
+                <span style={{ color: active ? "var(--accent)" : "var(--muted-2)", flexShrink: 0 }}>
                   <Icon path={item.icon} />
                 </span>
-                {item.label}
+                {!collapsed && item.label}
               </Link>
             );
           })}
         </nav>
 
         <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.6rem",
-              padding: "0.6rem",
-              borderRadius: "var(--radius-sm)",
-              background: "var(--surface-2)",
-              border: "1px solid var(--border)",
-            }}
-          >
-            <Avatar name={displayName} src={me?.profile?.avatar_url} size={30} />
-            <div style={{ overflow: "hidden" }}>
-              <div style={{ fontSize: "0.8rem", fontWeight: 600, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
-                {displayName}
-              </div>
-              {role && <div style={{ fontSize: "0.68rem", color: "var(--muted-2)", textTransform: "capitalize" }}>{role}</div>}
+          {/* User card */}
+          {collapsed ? (
+            <div style={{ display: "flex", justifyContent: "center" }}>
+              <Avatar name={displayName} src={me?.profile?.avatar_url} size={30} />
             </div>
-          </div>
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.6rem",
+                padding: "0.6rem",
+                borderRadius: "var(--radius-sm)",
+                background: "var(--surface-2)",
+                border: "1px solid var(--border)",
+              }}
+            >
+              <Avatar name={displayName} src={me?.profile?.avatar_url} size={30} />
+              <div style={{ overflow: "hidden" }}>
+                <div style={{ fontSize: "0.8rem", fontWeight: 600, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
+                  {displayName}
+                </div>
+                {role && <div style={{ fontSize: "0.68rem", color: "var(--muted-2)", textTransform: "capitalize" }}>{role}</div>}
+              </div>
+            </div>
+          )}
           <button
             onClick={signOut}
+            title="Sign out"
             style={{
               background: "transparent",
               border: "1px solid var(--border-strong)",
               color: "var(--muted)",
-              padding: "0.45rem 0.65rem",
+              padding: collapsed ? "0.45rem" : "0.45rem 0.65rem",
               borderRadius: "var(--radius-sm)",
               fontSize: "0.8rem",
               cursor: "pointer",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
             }}
           >
-            Sign out
+            {collapsed ? <Icon path="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" size={16} /> : "Sign out"}
           </button>
         </div>
       </aside>
