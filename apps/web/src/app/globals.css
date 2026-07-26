@@ -318,6 +318,7 @@ h2 {
 .cal-cell {
   min-height: 92px;
   padding: 0.35rem 0.4rem;
+  overflow-y: auto;
 }
 
 @media (max-width: 768px) {

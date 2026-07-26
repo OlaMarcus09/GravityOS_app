@@ -72,6 +72,7 @@ export default function MarketingPage() {
 
       {plan === "free" && <UpgradeBanner feature="Marketing Planner" />}
 
+      {plan !== "free" && (<>
       {isLoading && <Spinner />}
       <ErrorText error={error} />
 
@@ -164,6 +165,7 @@ export default function MarketingPage() {
       <Modal open={!!contentFor} onClose={() => setContentFor(null)} title="Add content">
         <ContentForm key={contentFor ?? "none"} onCancel={() => setContentFor(null)} onSubmit={submitContent} pending={addContent.isPending} />
       </Modal>
+      </>)}
     </div>
   );
 }

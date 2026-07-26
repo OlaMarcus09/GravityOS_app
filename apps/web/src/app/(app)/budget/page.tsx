@@ -86,6 +86,7 @@ export default function BudgetPage() {
 
       {plan === "free" && <UpgradeBanner feature="Budget Planner" />}
 
+      {plan !== "free" && (<>
       {isLoading && <Spinner />}
       <ErrorText error={error} />
 
@@ -179,6 +180,7 @@ export default function BudgetPage() {
       <Modal open={!!itemFor} onClose={() => setItemFor(null)} title="Add line item">
         <ItemForm key={itemFor ?? "none"} onCancel={() => setItemFor(null)} onSubmit={submitItem} pending={addItem.isPending} />
       </Modal>
+      </>)}
     </div>
   );
 }

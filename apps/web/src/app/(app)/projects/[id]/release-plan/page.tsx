@@ -75,6 +75,7 @@ export default function ReleasePlanPage({ params }: { params: { id: string } }) 
 
       {wsPlan === "free" && <UpgradeBanner feature="Release Planner" />}
 
+      {wsPlan !== "free" && (<>
       {isLoading && <Spinner />}
       <ErrorText error={error} />
 
@@ -206,6 +207,7 @@ export default function ReleasePlanPage({ params }: { params: { id: string } }) 
           </Modal>
         </>
       )}
+      </>)}
     </div>
   );
 }

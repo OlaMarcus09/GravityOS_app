@@ -431,25 +431,25 @@ export function UpgradeBanner({ feature }: { feature: string }) {
       className="glass"
       style={{
         display: "flex",
+        flexDirection: "column",
         alignItems: "center",
-        justifyContent: "space-between",
-        gap: "1rem",
-        padding: "1rem 1.25rem",
+        justifyContent: "center",
+        gap: "0.75rem",
+        padding: "3rem 1.5rem",
         marginBottom: "1.25rem",
         border: "1px solid var(--accent)",
-        flexWrap: "wrap",
+        textAlign: "center",
       }}
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: "0.2rem" }}>
-        <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>
-          Upgrade to Pro to unlock {feature}
-        </span>
-        <span style={{ fontSize: "0.78rem", color: "var(--muted)" }}>
-          Get unlimited projects, release planning, budgets, and more.
-        </span>
-      </div>
-      <a href="/settings" style={{ textDecoration: "none" }}>
-        <Button size="sm">Upgrade</Button>
+      <span style={{ fontSize: "1.5rem" }}>&#x1f512;</span>
+      <span style={{ fontSize: "1rem", fontWeight: 600 }}>
+        {feature} requires a paid plan
+      </span>
+      <span style={{ fontSize: "0.85rem", color: "var(--muted)", maxWidth: 380 }}>
+        Upgrade to Pro or Team to unlock {feature.toLowerCase()}, unlimited projects, release planning, budgets, and more.
+      </span>
+      <a href="/settings" style={{ textDecoration: "none", marginTop: "0.5rem" }}>
+        <Button>Upgrade now</Button>
       </a>
     </div>
   );
