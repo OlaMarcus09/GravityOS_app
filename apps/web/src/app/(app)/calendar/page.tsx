@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from "react";
 
-import type { CalendarCampaign, CalendarContent, CalendarEvent, CalendarMilestone, CalendarProjectRelease, EventInput } from "@/lib/api";
+import Link from "next/link";
+
+import type { CalendarCampaign, CalendarContent, CalendarEvent, CalendarMilestone, CalendarProjectRelease, CalendarTaskDue, EventInput } from "@/lib/api";
 import { useCalendar, useCalendarMutations } from "@/lib/queries/useCalendar";
 import { useWorkspace } from "@/lib/workspace";
 import {
@@ -74,7 +76,7 @@ export default function CalendarPage() {
   const byDay = useMemo(() => {
     const map = new Map<string, {
       events: CalendarEvent[];
-      dues: string[];
+      dues: CalendarTaskDue[];
       releases: CalendarProjectRelease[];
       campaigns: CalendarCampaign[];
       content: CalendarContent[];
@@ -85,7 +87,7 @@ export default function CalendarPage() {
       return map.get(key)!;
     };
     data?.events.forEach((e) => bump(e.starts_at.slice(0, 10)).events.push(e));
-    data?.task_due_dates.forEach((t) => bump(t.due_date).dues.push(t.title));
+    data?.task_due_dates.forEach((t) => bump(t.due_date).dues.push(t));
     data?.project_releases?.forEach((p) => bump(p.target_release_date).releases.push(p));
     data?.campaigns?.forEach((c) => bump(c.start_date).campaigns.push(c));
     data?.scheduled_content?.forEach((c) => bump(c.scheduled_at.slice(0, 10)).content.push(c));
@@ -186,6 +188,7 @@ export default function CalendarPage() {
                       openEdit(e);
                     }}
                     title={e.title}
+                    className="cal-item"
                     style={{
                       textAlign: "left",
                       fontSize: "0.68rem",
@@ -203,10 +206,13 @@ export default function CalendarPage() {
                     {e.title}
                   </button>
                 ))}
-                {cell?.dues.map((title, i) => (
-                  <span
-                    key={`due-${i}`}
-                    title={`Task due: ${title}`}
+                {cell?.dues.map((t) => (
+                  <Link
+                    key={`due-${t.id}`}
+                    href="/tasks"
+                    onClick={(ev) => ev.stopPropagation()}
+                    title={`Task due: ${t.title}`}
+                    className="cal-item"
                     style={{
                       fontSize: "0.68rem",
                       padding: "0.1rem 0.3rem",
@@ -216,15 +222,20 @@ export default function CalendarPage() {
                       whiteSpace: "nowrap",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
+                      textDecoration: "none",
+                      display: "block",
                     }}
                   >
-                    ⚑ {title}
-                  </span>
+                    ⚑ {t.title}
+                  </Link>
                 ))}
                 {cell?.releases.map((p) => (
-                  <span
+                  <Link
                     key={`release-${p.id}`}
+                    href={`/projects/${p.id}/release-plan`}
+                    onClick={(ev) => ev.stopPropagation()}
                     title={`Release: ${p.title} (${p.type})`}
+                    className="cal-item"
                     style={{
                       fontSize: "0.68rem",
                       padding: "0.1rem 0.3rem",
@@ -235,15 +246,20 @@ export default function CalendarPage() {
                       whiteSpace: "nowrap",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
+                      textDecoration: "none",
+                      display: "block",
                     }}
                   >
                     ▸ {p.title}
-                  </span>
+                  </Link>
                 ))}
                 {cell?.campaigns.map((c) => (
-                  <span
+                  <Link
                     key={`campaign-${c.id}`}
+                    href="/marketing"
+                    onClick={(ev) => ev.stopPropagation()}
                     title={`Campaign: ${c.name} (${c.objective})`}
+                    className="cal-item"
                     style={{
                       fontSize: "0.68rem",
                       padding: "0.1rem 0.3rem",
@@ -253,15 +269,20 @@ export default function CalendarPage() {
                       whiteSpace: "nowrap",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
+                      textDecoration: "none",
+                      display: "block",
                     }}
                   >
                     ◆ {c.name}
-                  </span>
+                  </Link>
                 ))}
                 {cell?.content.map((c) => (
-                  <span
+                  <Link
                     key={`content-${c.id}`}
+                    href="/marketing"
+                    onClick={(ev) => ev.stopPropagation()}
                     title={`${c.platform} ${c.format}${c.caption ? `: ${c.caption}` : ""}`}
+                    className="cal-item"
                     style={{
                       fontSize: "0.68rem",
                       padding: "0.1rem 0.3rem",
@@ -271,15 +292,20 @@ export default function CalendarPage() {
                       whiteSpace: "nowrap",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
+                      textDecoration: "none",
+                      display: "block",
                     }}
                   >
                     ✦ {c.platform} {c.format}
-                  </span>
+                  </Link>
                 ))}
                 {cell?.milestones.map((m) => (
-                  <span
+                  <Link
                     key={`milestone-${m.id}`}
+                    href="/projects"
+                    onClick={(ev) => ev.stopPropagation()}
                     title={`Milestone: ${m.title} (${m.category})`}
+                    className="cal-item"
                     style={{
                       fontSize: "0.68rem",
                       padding: "0.1rem 0.3rem",
@@ -289,10 +315,12 @@ export default function CalendarPage() {
                       whiteSpace: "nowrap",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
+                      textDecoration: "none",
+                      display: "block",
                     }}
                   >
                     ● {m.title}
-                  </span>
+                  </Link>
                 ))}
               </div>
             );

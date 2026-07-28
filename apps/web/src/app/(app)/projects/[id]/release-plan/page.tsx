@@ -51,9 +51,10 @@ export default function ReleasePlanPage({ params }: { params: { id: string } }) 
     if (!plan) return;
     addMilestone.mutate(
       { planId: plan.id, body: { ...body, position: milestones.length } },
-      { onSuccess: () => setMilestoneOpen(false) },
+      { onSuccess: () => { setMilestoneOpen(false); setMutationError(null); }, onError: (e) => setMutationError(e) },
     );
   };
+  const [mutationError, setMutationError] = useState<Error | null>(null);
 
   const cycleStatus = (m: Milestone) => {
     const order = MILESTONE_STATUS;
@@ -197,12 +198,13 @@ export default function ReleasePlanPage({ params }: { params: { id: string } }) 
             })}
           </div>
 
-          <Modal open={milestoneOpen} onClose={() => setMilestoneOpen(false)} title="Add milestone">
+          <Modal open={milestoneOpen} onClose={() => { setMilestoneOpen(false); setMutationError(null); }} title="Add milestone">
             <MilestoneForm
               key={milestoneOpen ? "open" : "closed"}
               onCancel={() => setMilestoneOpen(false)}
               onSubmit={submitMilestone}
               pending={addMilestone.isPending}
+              error={mutationError}
             />
           </Modal>
         </>
@@ -250,10 +252,12 @@ function MilestoneForm({
   onSubmit,
   onCancel,
   pending,
+  error,
 }: {
   onSubmit: (body: MilestoneInput) => void;
   onCancel: () => void;
   pending: boolean;
+  error: Error | null;
 }) {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<(typeof MILESTONE_CATEGORIES)[number]>("production");
@@ -293,6 +297,7 @@ function MilestoneForm({
       <Field label="Due date">
         <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
       </Field>
+      <ErrorText error={error} />
       <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "0.5rem" }}>
         <Button variant="ghost" onClick={onCancel}>
           Cancel

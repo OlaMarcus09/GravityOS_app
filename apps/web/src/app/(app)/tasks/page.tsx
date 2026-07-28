@@ -42,10 +42,11 @@ export default function TasksPage() {
   };
 
   const submit = (body: TaskInput) => {
-    const onSuccess = () => setOpen(false);
-    if (editing) update.mutate({ id: editing.id, body }, { onSuccess });
-    else create.mutate(body, { onSuccess });
+    const onSuccess = () => { setOpen(false); setMutationError(null); };
+    if (editing) update.mutate({ id: editing.id, body }, { onSuccess, onError: (e) => setMutationError(e) });
+    else create.mutate(body, { onSuccess, onError: (e) => setMutationError(e) });
   };
+  const [mutationError, setMutationError] = useState<Error | null>(null);
 
   const toggleDone = (t: Task) =>
     update.mutate({
@@ -118,10 +119,11 @@ export default function TasksPage() {
 
       <TaskModal
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={() => { setOpen(false); setMutationError(null); }}
         editing={editing}
         onSubmit={submit}
         pending={create.isPending || update.isPending}
+        error={mutationError}
       />
     </div>
   );
@@ -133,12 +135,14 @@ function TaskModal({
   editing,
   onSubmit,
   pending,
+  error,
 }: {
   open: boolean;
   onClose: () => void;
   editing: Task | null;
   onSubmit: (body: TaskInput) => void;
   pending: boolean;
+  error: Error | null;
 }) {
   return (
     <Modal open={open} onClose={onClose} title={editing ? "Edit task" : "New task"}>
@@ -148,6 +152,7 @@ function TaskModal({
         onCancel={onClose}
         pending={pending}
         onSubmit={onSubmit}
+        error={error}
       />
     </Modal>
   );
@@ -158,11 +163,13 @@ function FormBody({
   onSubmit,
   onCancel,
   pending,
+  error,
 }: {
   initial: Task | null;
   onSubmit: (body: TaskInput) => void;
   onCancel: () => void;
   pending: boolean;
+  error: Error | null;
 }) {
   const [title, setTitle] = useState(initial?.title ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
@@ -208,6 +215,7 @@ function FormBody({
       <Field label="Due date">
         <Input type="date" value={dueDate ?? ""} onChange={(e) => setDueDate(e.target.value)} />
       </Field>
+      <ErrorText error={error} />
       <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "0.5rem" }}>
         <Button variant="ghost" onClick={onCancel}>
           Cancel

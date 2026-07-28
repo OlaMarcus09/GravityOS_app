@@ -323,22 +323,14 @@ h2 {
 
 @media (max-width: 768px) {
   .cal-cell {
-    min-height: 48px;
+    min-height: 68px;
     padding: 0.2rem 0.25rem;
+    gap: 0.15rem;
   }
-  /* Hide event labels on tiny cells — just show the dot indicator */
-  .cal-cell button,
-  .cal-cell span:not(:first-child) {
-    display: none;
-  }
-  .cal-cell:has(button)::after,
-  .cal-cell:has(span:nth-child(2))::after {
-    content: "";
-    display: block;
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: var(--accent);
-    margin-top: 2px;
+  /* Compact but readable event chips on mobile — smaller font, tighter padding */
+  .cal-cell .cal-item {
+    font-size: 0.58rem !important;
+    padding: 0.05rem 0.2rem !important;
+    line-height: 1.2;
   }
 }

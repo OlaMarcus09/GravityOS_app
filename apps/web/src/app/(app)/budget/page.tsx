@@ -64,15 +64,16 @@ export default function BudgetPage() {
   };
 
   const submitBudget = (body: BudgetInput) => {
-    const onSuccess = () => setBudgetOpen(false);
-    if (editingBudget) update.mutate({ id: editingBudget.id, body }, { onSuccess });
-    else create.mutate(body, { onSuccess });
+    const onSuccess = () => { setBudgetOpen(false); setMutationError(null); };
+    if (editingBudget) update.mutate({ id: editingBudget.id, body }, { onSuccess, onError: (e) => setMutationError(e) });
+    else create.mutate(body, { onSuccess, onError: (e) => setMutationError(e) });
   };
 
   const submitItem = (body: BudgetItemInput) => {
     if (!itemFor) return;
-    addItem.mutate({ budgetId: itemFor, body }, { onSuccess: () => setItemFor(null) });
+    addItem.mutate({ budgetId: itemFor, body }, { onSuccess: () => setItemFor(null), onError: (e) => setMutationError(e) });
   };
+  const [mutationError, setMutationError] = useState<Error | null>(null);
 
   const budgets = (data ?? []) as BudgetWithItems[];
 
@@ -167,18 +168,19 @@ export default function BudgetPage() {
         })}
       </div>
 
-      <Modal open={budgetOpen} onClose={() => setBudgetOpen(false)} title={editingBudget ? "Edit budget" : "New budget"}>
+      <Modal open={budgetOpen} onClose={() => { setBudgetOpen(false); setMutationError(null); }} title={editingBudget ? "Edit budget" : "New budget"}>
         <BudgetForm
           key={editingBudget?.id ?? "new"}
           initial={editingBudget}
           onCancel={() => setBudgetOpen(false)}
           onSubmit={submitBudget}
           pending={create.isPending || update.isPending}
+          error={mutationError}
         />
       </Modal>
 
-      <Modal open={!!itemFor} onClose={() => setItemFor(null)} title="Add line item">
-        <ItemForm key={itemFor ?? "none"} onCancel={() => setItemFor(null)} onSubmit={submitItem} pending={addItem.isPending} />
+      <Modal open={!!itemFor} onClose={() => { setItemFor(null); setMutationError(null); }} title="Add line item">
+        <ItemForm key={itemFor ?? "none"} onCancel={() => setItemFor(null)} onSubmit={submitItem} pending={addItem.isPending} error={mutationError} />
       </Modal>
       </>)}
     </div>
@@ -190,11 +192,13 @@ function BudgetForm({
   onSubmit,
   onCancel,
   pending,
+  error,
 }: {
   initial: Budget | null;
   onSubmit: (body: BudgetInput) => void;
   onCancel: () => void;
   pending: boolean;
+  error: Error | null;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [total, setTotal] = useState(initial?.total_amount ?? "");
@@ -219,6 +223,7 @@ function BudgetForm({
           <Input value={currency} onChange={(e) => setCurrency(e.target.value.toUpperCase())} maxLength={3} />
         </Field>
       </div>
+      <ErrorText error={error} />
       <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "0.5rem" }}>
         <Button variant="ghost" onClick={onCancel}>
           Cancel
@@ -235,10 +240,12 @@ function ItemForm({
   onSubmit,
   onCancel,
   pending,
+  error,
 }: {
   onSubmit: (body: BudgetItemInput) => void;
   onCancel: () => void;
   pending: boolean;
+  error: Error | null;
 }) {
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]>("production");
   const [label, setLabel] = useState("");
@@ -291,6 +298,7 @@ function ItemForm({
           <Input type="number" min="0" step="0.01" value={actual} onChange={(e) => setActual(e.target.value)} />
         </Field>
       </div>
+      <ErrorText error={error} />
       <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "0.5rem" }}>
         <Button variant="ghost" onClick={onCancel}>
           Cancel

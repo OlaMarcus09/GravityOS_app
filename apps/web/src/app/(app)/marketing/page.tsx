@@ -50,15 +50,16 @@ export default function MarketingPage() {
   };
 
   const submitCampaign = (body: CampaignInput) => {
-    const onSuccess = () => setCampaignOpen(false);
-    if (editingCampaign) update.mutate({ id: editingCampaign.id, body }, { onSuccess });
-    else create.mutate(body, { onSuccess });
+    const onSuccess = () => { setCampaignOpen(false); setMutationError(null); };
+    if (editingCampaign) update.mutate({ id: editingCampaign.id, body }, { onSuccess, onError: (e) => setMutationError(e) });
+    else create.mutate(body, { onSuccess, onError: (e) => setMutationError(e) });
   };
 
   const submitContent = (body: ContentInput) => {
     if (!contentFor) return;
-    addContent.mutate({ campaignId: contentFor, body }, { onSuccess: () => setContentFor(null) });
+    addContent.mutate({ campaignId: contentFor, body }, { onSuccess: () => setContentFor(null), onError: (e) => setMutationError(e) });
   };
+  const [mutationError, setMutationError] = useState<Error | null>(null);
 
   const campaigns = (data ?? []) as CampaignWithContent[];
 
@@ -152,17 +153,18 @@ export default function MarketingPage() {
         })}
       </div>
 
-      <Modal open={campaignOpen} onClose={() => setCampaignOpen(false)} title={editingCampaign ? "Edit campaign" : "New campaign"}>
+      <Modal open={campaignOpen} onClose={() => { setCampaignOpen(false); setMutationError(null); }} title={editingCampaign ? "Edit campaign" : "New campaign"}>
         <CampaignForm
           key={editingCampaign?.id ?? "new"}
           initial={editingCampaign}
           onCancel={() => setCampaignOpen(false)}
           onSubmit={submitCampaign}
           pending={create.isPending || update.isPending}
+          error={mutationError}
         />
       </Modal>
 
-      <Modal open={!!contentFor} onClose={() => setContentFor(null)} title="Add content">
+      <Modal open={!!contentFor} onClose={() => { setContentFor(null); setMutationError(null); }} title="Add content">
         <ContentForm key={contentFor ?? "none"} onCancel={() => setContentFor(null)} onSubmit={submitContent} pending={addContent.isPending} />
       </Modal>
       </>)}
@@ -175,11 +177,13 @@ function CampaignForm({
   onSubmit,
   onCancel,
   pending,
+  error,
 }: {
   initial: Campaign | null;
   onSubmit: (body: CampaignInput) => void;
   onCancel: () => void;
   pending: boolean;
+  error: Error | null;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [objective, setObjective] = useState(initial?.objective ?? "awareness");
@@ -229,6 +233,7 @@ function CampaignForm({
           ))}
         </Select>
       </Field>
+      <ErrorText error={error} />
       <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "0.5rem" }}>
         <Button variant="ghost" onClick={onCancel}>
           Cancel
