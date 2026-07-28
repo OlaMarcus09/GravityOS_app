@@ -1,7 +1,9 @@
 """Workspaces & teams routes (ARCHITECTURE.md section 3)."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.auth import AuthContext, get_auth_context
 from app.core.db import get_service_client
@@ -9,6 +11,16 @@ from app.core.deps import WorkspaceContext, get_workspace_context, require_write
 from app.schemas.workspaces import MemberInvite, MemberUpdate, WorkspaceCreate, WorkspaceUpdate
 
 router = APIRouter(prefix="/workspaces", tags=["workspaces"])
+
+# Super-admin user ID — the only account that can manage plans for other workspaces.
+SUPER_ADMIN_ID = "a80ea672-27f1-4ccd-be67-765e67bb65c9"
+
+
+def _require_super_admin(auth: AuthContext = Depends(get_auth_context)) -> AuthContext:
+    if auth.user_id != SUPER_ADMIN_ID:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail={"error": {"code": "forbidden", "message": "super admin only"}})
+    return auth
 
 
 @router.get("")
@@ -81,3 +93,41 @@ def remove_member(user_id: str, ctx: WorkspaceContext = Depends(require_writer))
                             detail={"error": {"code": "forbidden", "message": "owner or admin required"}})
     svc = get_service_client()
     svc.table("workspace_members").delete().eq("workspace_id", ctx.workspace_id).eq("user_id", user_id).execute()
+
+
+# --- Admin-only routes (super admin) ----------------------------------------
+
+@router.get("/admin/all")
+def admin_list_all(
+    auth: AuthContext = Depends(_require_super_admin),
+    email: Optional[str] = Query(None),
+) -> list[dict]:
+    """List all workspaces (optionally filtered by owner email)."""
+    svc = get_service_client()
+    if email:
+        # Look up user by email in auth.users via profiles
+        user_res = svc.auth.admin.list_users()
+        matched = [u for u in user_res if u.email and u.email.lower() == email.lower()]
+        if not matched:
+            return []
+        uid = matched[0].id
+        rows = svc.table("workspaces").select("*, workspace_members(user_id, role)").eq("owner_id", uid).execute().data or []
+    else:
+        rows = svc.table("workspaces").select("*, workspace_members(user_id, role)").order("created_at", desc=True).execute().data or []
+    return rows
+
+
+@router.patch("/admin/{workspace_id}/plan")
+def admin_set_plan(
+    workspace_id: str,
+    plan: str = Query(...),
+    auth: AuthContext = Depends(_require_super_admin),
+) -> dict:
+    """Set a workspace's plan (free/pro/team). Super admin only."""
+    if plan not in ("free", "pro", "team"):
+        raise HTTPException(status_code=400, detail={"error": {"code": "invalid_plan", "message": "plan must be free, pro, or team"}})
+    svc = get_service_client()
+    res = svc.table("workspaces").update({"plan": plan}).eq("id", workspace_id).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail={"error": {"code": "not_found", "message": "workspace not found"}})
+    return res.data[0]

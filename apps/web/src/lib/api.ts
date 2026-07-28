@@ -515,3 +515,22 @@ export const gravityScoreApi = {
   compute: (ws: string) =>
     apiFetch<NonNullable<GravityScore>>("/gravity-score/compute", { method: "POST", workspaceId: ws }),
 };
+
+// --- Admin -----------------------------------------------------------------
+
+export type AdminWorkspace = {
+  id: string;
+  name: string;
+  plan: string;
+  owner_id: string;
+  created_at: string;
+};
+
+export const adminApi = {
+  listAll: (email?: string) => {
+    const qs = email ? `?email=${encodeURIComponent(email)}` : "";
+    return apiFetch<AdminWorkspace[]>(`/workspaces/admin/all${qs}`);
+  },
+  setPlan: (workspaceId: string, plan: string) =>
+    apiFetch<AdminWorkspace>(`/workspaces/admin/${workspaceId}/plan?plan=${plan}`, { method: "PATCH" }),
+};

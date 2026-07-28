@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { adminApi, type AdminWorkspace } from "@/lib/api";
 import { useMe, useProfileMutation } from "@/lib/queries/useMe";
 import { useWorkspace } from "@/lib/workspace";
 import { Badge, Button, Card, ErrorText, Field, Input, PageHeader, Select } from "@/components/ui";
@@ -172,6 +173,110 @@ export default function SettingsPage() {
           </p>
         )}
       </Card>
+
+      {/* Admin Panel — only visible to super admin */}
+      {me?.user_id === "a80ea672-27f1-4ccd-be67-765e67bb65c9" && (
+        <AdminPanel />
+      )}
     </div>
+  );
+}
+
+function AdminPanel() {
+  const [email, setEmail] = useState("");
+  const [results, setResults] = useState<AdminWorkspace[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const search = async () => {
+    setLoading(true);
+    setMsg(null);
+    try {
+      const data = await adminApi.listAll(email.trim() || undefined);
+      setResults(data);
+      if (data.length === 0) setMsg("No workspaces found.");
+    } catch (e) {
+      setMsg((e as Error).message);
+    }
+    setLoading(false);
+  };
+
+  const changePlan = async (wsId: string, newPlan: string) => {
+    setMsg(null);
+    try {
+      const updated = await adminApi.setPlan(wsId, newPlan);
+      setResults((prev) => prev.map((w) => (w.id === wsId ? { ...w, plan: updated.plan } : w)));
+      setMsg(`Updated to ${newPlan}`);
+    } catch (e) {
+      setMsg((e as Error).message);
+    }
+  };
+
+  return (
+    <Card style={{ padding: "1.5rem", marginTop: "1.5rem" }}>
+      <span className="eyebrow">Admin — Manage Plans</span>
+      <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.75rem", alignItems: "flex-end" }}>
+        <Field label="Search by email">
+          <Input
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="user@example.com"
+            onKeyDown={(e) => e.key === "Enter" && search()}
+          />
+        </Field>
+        <Button onClick={search} disabled={loading} size="sm">
+          {loading ? "..." : "Search"}
+        </Button>
+        <Button onClick={() => { setEmail(""); search(); }} variant="ghost" size="sm">
+          All
+        </Button>
+      </div>
+
+      {msg && <p style={{ fontSize: "0.82rem", color: "var(--accent)", margin: "0.75rem 0 0" }}>{msg}</p>}
+
+      {results.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "1rem" }}>
+          {results.map((ws) => (
+            <div
+              key={ws.id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "0.75rem",
+                padding: "0.6rem 0.75rem",
+                background: "var(--surface-2)",
+                borderRadius: "var(--radius-sm)",
+                border: "1px solid var(--border)",
+              }}
+            >
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: "0.85rem", fontWeight: 600 }}>{ws.name}</div>
+                <div style={{ fontSize: "0.72rem", color: "var(--muted-2)" }}>{ws.id.slice(0, 8)}…</div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexShrink: 0 }}>
+                <Badge tone={ws.plan === "free" ? "neutral" : "accent"}>{ws.plan}</Badge>
+                <select
+                  value={ws.plan}
+                  onChange={(e) => changePlan(ws.id, e.target.value)}
+                  style={{
+                    padding: "0.3rem 0.4rem",
+                    background: "var(--surface-2)",
+                    border: "1px solid var(--border)",
+                    borderRadius: "var(--radius-sm)",
+                    color: "var(--fg)",
+                    fontSize: "0.75rem",
+                  }}
+                >
+                  <option value="free">Free</option>
+                  <option value="pro">Pro</option>
+                  <option value="team">Team</option>
+                </select>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
   );
 }
