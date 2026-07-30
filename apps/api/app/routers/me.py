@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from supabase import Client
 
 from app.core.auth import AuthContext, get_auth_context
+from app.core.config import get_settings
 from app.core.deps import get_db
 
 router = APIRouter(tags=["me"])
@@ -42,6 +43,11 @@ def _read_me(auth: AuthContext, db: Client) -> dict:
     return {
         "user_id": auth.user_id,
         "email": auth.email,
+        "capabilities": {
+            "platform_admin": bool(
+                auth.email and auth.email.lower() in get_settings().super_admin_email_set
+            )
+        },
         "profile": profile.data,
         "memberships": memberships.data or [],
     }

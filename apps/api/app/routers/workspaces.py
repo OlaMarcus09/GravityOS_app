@@ -6,18 +6,15 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.auth import AuthContext, get_auth_context
+from app.core.config import get_settings
 from app.core.db import get_service_client
 from app.core.deps import WorkspaceContext, get_workspace_context, require_writer
 from app.schemas.workspaces import MemberInvite, MemberUpdate, WorkspaceCreate, WorkspaceUpdate
 
 router = APIRouter(prefix="/workspaces", tags=["workspaces"])
 
-# Super-admin user ID — the only account that can manage plans for other workspaces.
-SUPER_ADMIN_ID = "a80ea672-27f1-4ccd-be67-765e67bb65c9"
-
-
 def _require_super_admin(auth: AuthContext = Depends(get_auth_context)) -> AuthContext:
-    if auth.user_id != SUPER_ADMIN_ID:
+    if not auth.email or auth.email.lower() not in get_settings().super_admin_email_set:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                             detail={"error": {"code": "forbidden", "message": "super admin only"}})
     return auth
@@ -97,7 +94,7 @@ def remove_member(user_id: str, ctx: WorkspaceContext = Depends(require_writer))
 
 # --- Admin-only routes (super admin) ----------------------------------------
 
-@router.get("/admin/all")
+@router.get("/admin/workspaces")
 def admin_list_all(
     auth: AuthContext = Depends(_require_super_admin),
     email: Optional[str] = Query(None),
@@ -117,7 +114,7 @@ def admin_list_all(
     return rows
 
 
-@router.patch("/admin/{workspace_id}/plan")
+@router.patch("/admin/workspaces/{workspace_id}/plan")
 def admin_set_plan(
     workspace_id: str,
     plan: str = Query(...),

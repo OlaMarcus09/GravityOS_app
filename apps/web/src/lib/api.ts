@@ -48,8 +48,10 @@ export async function apiFetch<T>(path: string, opts: ApiOptions = {}): Promise<
     let code: string | undefined;
     try {
       const payload = await res.json();
-      message = payload?.error?.message ?? message;
-      code = payload?.error?.code;
+      // Support both the normalized contract and older API deployments.
+      const error = payload?.error ?? payload?.detail?.error;
+      message = error?.message ?? payload?.detail ?? message;
+      code = error?.code;
     } catch {
       // non-JSON error body
     }
@@ -70,6 +72,7 @@ export type Membership = {
 export type MeResponse = {
   user_id: string;
   email: string | null;
+  capabilities: { platform_admin: boolean };
   profile: {
     id: string;
     display_name: string | null;
@@ -524,13 +527,15 @@ export type AdminWorkspace = {
   plan: string;
   owner_id: string;
   created_at: string;
+  type: string;
+  workspace_members?: Array<{ user_id: string; role: string }>;
 };
 
 export const adminApi = {
   listAll: (email?: string) => {
     const qs = email ? `?email=${encodeURIComponent(email)}` : "";
-    return apiFetch<AdminWorkspace[]>(`/workspaces/admin/all${qs}`);
+    return apiFetch<AdminWorkspace[]>(`/workspaces/admin/workspaces${qs}`);
   },
   setPlan: (workspaceId: string, plan: string) =>
-    apiFetch<AdminWorkspace>(`/workspaces/admin/${workspaceId}/plan?plan=${plan}`, { method: "PATCH" }),
+    apiFetch<AdminWorkspace>(`/workspaces/admin/workspaces/${workspaceId}/plan?plan=${plan}`, { method: "PATCH" }),
 };

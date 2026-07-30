@@ -5,8 +5,10 @@ the skeleton; the rest return stub markers behind real dependency chains.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, FastAPI, Request
+from fastapi.exceptions import HTTPException, RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.core.config import get_settings
 from app.routers import (
@@ -30,6 +32,37 @@ API_PREFIX = "/api/v1"
 def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(title="Gravity OS API", version="0.1.0")
+
+    @app.exception_handler(HTTPException)
+    async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+        """Expose the documented error shape consistently to the web client."""
+        detail = exc.detail
+        if isinstance(detail, dict) and isinstance(detail.get("error"), dict):
+            error = detail["error"]
+        elif isinstance(detail, str):
+            error = {"code": "http_error", "message": detail, "details": None}
+        else:
+            error = {"code": "http_error", "message": "Request failed", "details": detail}
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"error": error},
+            headers=exc.headers,
+        )
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(
+        request: Request, exc: RequestValidationError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "error": {
+                    "code": "validation_error",
+                    "message": "Request validation failed",
+                    "details": exc.errors(),
+                }
+            },
+        )
 
     app.add_middleware(
         CORSMiddleware,

@@ -28,12 +28,19 @@ class Settings(BaseSettings):
     # Stripe (placeholder until keys are configured)
     stripe_secret_key: str = Field(default="", alias="STRIPE_SECRET_KEY")
     stripe_webhook_secret: str = Field(default="", alias="STRIPE_WEBHOOK_SECRET")
+    super_admin_emails: str = Field(
+        default="olawalemarcus92@gmail.com", alias="SUPER_ADMIN_EMAILS"
+    )
 
     environment: str = Field(default="development", alias="ENVIRONMENT")
 
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @property
+    def super_admin_email_set(self) -> set[str]:
+        return {value.strip().lower() for value in self.super_admin_emails.split(",") if value.strip()}
 
 
 @lru_cache

@@ -39,6 +39,12 @@ const NAV = [
   { href: "/settings", label: "Settings", icon: "M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" },
 ];
 
+const ADMIN_NAV = {
+  href: "/admin",
+  label: "Admin",
+  icon: "M12 3 4 6v5c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V6l-8-3Zm0 5v4m0 4h.01",
+};
+
 const SIDEBAR_KEY = "gravity.sidebar_collapsed";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -78,6 +84,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const displayName = me?.profile?.display_name ?? me?.email ?? "You";
   const role = memberships.find((m) => m.workspace_id === workspaceId)?.role;
+  const navigation = me?.capabilities.platform_admin ? [...NAV, ADMIN_NAV] : NAV;
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -182,7 +189,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         )}
 
         <nav style={{ display: "flex", flexDirection: "column", gap: "0.15rem" }}>
-          {NAV.map((item) => {
+          {navigation.map((item) => {
             const active = pathname === item.href || pathname.startsWith(item.href + "/");
             return (
               <Link
@@ -316,7 +323,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Mobile-only bottom tab bar — 7 icon tabs, active tab shows its label. */}
       <nav className="mobile-tabbar">
-        {NAV.map((item) => {
+        {navigation.map((item) => {
           const active = pathname === item.href || pathname.startsWith(item.href + "/");
           return (
             <Link key={item.href} href={item.href} className={`tab-item${active ? " active" : ""}`}>

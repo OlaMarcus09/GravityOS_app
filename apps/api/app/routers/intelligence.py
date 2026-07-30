@@ -18,6 +18,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
 
+from app.core.db import get_service_client
 from app.core.deps import WorkspaceContext, get_workspace_context
 
 router = APIRouter(tags=["intelligence"])
@@ -199,7 +200,10 @@ def compute_gravity_score(ctx: WorkspaceContext = Depends(get_workspace_context)
         "computed_at": datetime.now(timezone.utc).isoformat(),
         **scores,
     }
-    res = ctx.db.table("gravity_scores").insert(row).execute()
+    # Scores are service-owned snapshots. Inputs are read through the caller's
+    # RLS-scoped client above; only the final snapshot write uses the service
+    # client because RLS intentionally exposes gravity_scores as read-only.
+    res = get_service_client().table("gravity_scores").insert(row).execute()
     return res.data[0]
 
 
