@@ -145,6 +145,30 @@ export const teamApi = {
     apiFetch<void>(`/workspaces/${ws}/members/${userId}`, { method: "DELETE", workspaceId: ws }),
 };
 
+export type AppNotification = {
+  id: string;
+  workspace_id: string | null;
+  kind: string;
+  title: string;
+  message: string;
+  action_url: string | null;
+  metadata: Record<string, unknown>;
+  read_at: string | null;
+  created_at: string;
+};
+
+export type NotificationResponse = {
+  items: AppNotification[];
+  unread_count: number;
+};
+
+export const notificationsApi = {
+  list: (limit = 30) => apiFetch<NotificationResponse>(`/notifications?limit=${limit}`),
+  markRead: (id: string) => apiFetch<AppNotification>(`/notifications/${id}/read`, { method: "PATCH" }),
+  markAllRead: () => apiFetch<void>("/notifications/read-all", { method: "POST" }),
+  dismiss: (id: string) => apiFetch<void>(`/notifications/${id}`, { method: "DELETE" }),
+};
+
 // --- Tasks -----------------------------------------------------------------
 
 export type TaskStatus = "todo" | "in_progress" | "blocked" | "done";
