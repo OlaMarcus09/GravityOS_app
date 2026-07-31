@@ -24,6 +24,7 @@ export function Card({ children, style }: { children: ReactNode; style?: CSSProp
 
 type ButtonProps = {
   children: ReactNode;
+  className?: string;
   onClick?: () => void;
   variant?: "primary" | "ghost" | "danger";
   type?: "button" | "submit";
@@ -34,6 +35,7 @@ type ButtonProps = {
 
 export function Button({
   children,
+  className,
   onClick,
   variant = "primary",
   type = "button",
@@ -53,6 +55,7 @@ export function Button({
   };
   return (
     <button
+      className={className}
       type={type}
       onClick={onClick}
       disabled={disabled}
@@ -549,5 +552,4 @@ export function OrbitMap({ nodes, size = 260 }: { nodes: OrbitNode[]; size?: num
     </div>
   );
 }
-
 

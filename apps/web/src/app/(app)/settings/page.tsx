@@ -113,12 +113,12 @@ export default function SettingsPage() {
         <Card style={{ padding: "1.5rem", marginBottom: "1.5rem" }}>
           <span className="eyebrow">Workspace invitations</span>
           {pending.data.map((invite) => (
-            <div key={invite.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", marginTop: "0.9rem", flexWrap: "wrap" }}>
-              <div>
+            <div key={invite.id} className="team-list-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", marginTop: "0.9rem", flexWrap: "wrap" }}>
+              <div className="team-list-copy">
                 <strong>{invite.workspaces?.name ?? "Workspace"}</strong>
                 <p style={{ margin: "0.2rem 0 0", color: "var(--muted)", fontSize: "0.82rem" }}>Invited as {invite.role}</p>
               </div>
-              <Button size="sm" disabled={invitations.accept.isPending} onClick={() => invitations.accept.mutate(invite.id, { onSuccess: (result) => setWorkspaceId(result.workspace_id) })}>Accept</Button>
+              <Button className="team-accept-button" size="sm" disabled={invitations.accept.isPending} onClick={() => invitations.accept.mutate(invite.id, { onSuccess: (result) => setWorkspaceId(result.workspace_id) })}>Accept</Button>
             </div>
           ))}
           <ErrorText error={invitations.accept.error} />
@@ -211,7 +211,7 @@ export default function SettingsPage() {
           </p>
         ) : (
           <>
-            <div style={{ display: "grid", gridTemplateColumns: "minmax(180px, 1fr) 140px auto", gap: "0.75rem", marginTop: "0.9rem" }}>
+            <div className="team-invite-form" style={{ display: "grid", gridTemplateColumns: "minmax(180px, 1fr) 140px auto", gap: "0.75rem", marginTop: "0.9rem" }}>
               <Input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="collaborator@example.com" />
               <Select value={inviteRole} onChange={(e) => setInviteRole(e.target.value as typeof inviteRole)}>
                 <option value="member">Member</option><option value="admin">Admin</option><option value="viewer">Viewer</option>
@@ -223,7 +223,7 @@ export default function SettingsPage() {
               {(workspaceInvites.data ?? []).filter((invite) => !invite.accepted_at && !invite.revoked_at).map((invite) => (
                 <div key={invite.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
                   <div><strong style={{ fontSize: "0.88rem" }}>{invite.email}</strong><p style={{ margin: "0.2rem 0 0", color: "var(--muted)", fontSize: "0.78rem" }}>{invite.role} · expires {new Date(invite.expires_at).toLocaleDateString()}</p></div>
-                  <div style={{ display: "flex", gap: "0.5rem" }}><Button size="sm" variant="ghost" onClick={() => invitations.resend.mutate(invite.id)}>Resend</Button><Button size="sm" variant="danger" onClick={() => invitations.revoke.mutate(invite.id)}>Revoke</Button></div>
+                  <div className="team-invite-actions" style={{ display: "flex", gap: "0.5rem" }}><Button size="sm" variant="ghost" onClick={() => invitations.resend.mutate(invite.id)}>Resend</Button><Button size="sm" variant="danger" onClick={() => invitations.revoke.mutate(invite.id)}>Revoke</Button></div>
                 </div>
               ))}
             </div>

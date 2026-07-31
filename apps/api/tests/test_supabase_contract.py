@@ -53,3 +53,4 @@ def test_invitation_acceptance_is_recipient_scoped_and_atomic():
     assert "insert into public.workspace_members" in sql
     assert "set accepted_at = now()" in sql
     assert "grant execute on function public.accept_workspace_invitation(uuid) to authenticated" in sql
+    assert "on conflict on constraint workspace_members_workspace_id_user_id_key" in sql

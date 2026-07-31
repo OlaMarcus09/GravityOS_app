@@ -109,7 +109,9 @@ begin
   ) values (
     invitation.workspace_id, auth.uid(), invitation.role, invitation.invited_at, now()
   )
-  on conflict (workspace_id, user_id) do update
+  -- Use the constraint name because the function's returned `workspace_id`
+  -- column would otherwise make the unqualified conflict target ambiguous.
+  on conflict on constraint workspace_members_workspace_id_user_id_key do update
     set joined_at = coalesce(public.workspace_members.joined_at, excluded.joined_at)
   returning id into new_membership_id;
 
