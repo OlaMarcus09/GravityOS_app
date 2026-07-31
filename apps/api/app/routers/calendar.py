@@ -6,6 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.deps import WorkspaceContext, get_workspace_context, require_writer
+from app.core.tenant_refs import validate_project_reference
 from app.schemas.calendar import CalendarEventCreate, CalendarEventUpdate
 
 router = APIRouter(prefix="/calendar", tags=["calendar"])
@@ -109,9 +110,12 @@ def get_calendar(
 
 @router.post("/events", status_code=status.HTTP_201_CREATED)
 def create_event(body: CalendarEventCreate, ctx: WorkspaceContext = Depends(require_writer)) -> dict:
+    payload = body.model_dump(exclude_none=True, mode="json")
+    if project_id := payload.get("project_id"):
+        validate_project_reference(ctx, project_id)
     res = (
         ctx.db.table("calendar_events")
-        .insert({**body.model_dump(exclude_none=True, mode="json"), "workspace_id": ctx.workspace_id})
+        .insert({**payload, "workspace_id": ctx.workspace_id})
         .execute()
     )
     return res.data[0]
@@ -123,6 +127,8 @@ def update_event(event_id: str, body: CalendarEventUpdate, ctx: WorkspaceContext
     updates = body.model_dump(exclude_none=True, mode="json")
     if not updates:
         return _get_or_404(ctx, event_id)
+    if project_id := updates.get("project_id"):
+        validate_project_reference(ctx, project_id)
     res = (
         ctx.db.table("calendar_events")
         .update(updates)

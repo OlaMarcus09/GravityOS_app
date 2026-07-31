@@ -11,15 +11,16 @@ The Gravity Score is a 0–100 composite computed from six dimensions:
 POST /gravity-score/compute triggers a fresh calculation and stores it.
 GET  /gravity-score returns the latest snapshot.
 """
+
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.db import get_service_client
-from app.core.deps import WorkspaceContext, get_workspace_context
+from app.core.deps import WorkspaceContext, get_workspace_context, require_writer
 
 router = APIRouter(tags=["intelligence"])
 
@@ -37,55 +38,74 @@ def _compute_score(ctx: WorkspaceContext) -> dict:
     # ---------- fetch raw data ----------
 
     all_tasks = (
-        ctx.db.table("tasks").select("id,status,due_date,priority,project_id,completed_at,created_at")
-        .eq("workspace_id", ws).execute().data or []
+        ctx.db.table("tasks")
+        .select("id,status,due_date,priority,project_id,completed_at,created_at")
+        .eq("workspace_id", ws)
+        .execute()
+        .data
+        or []
     )
     recent_tasks = [t for t in all_tasks if (t.get("created_at") or "") >= thirty_days_ago]
 
     all_events = (
-        ctx.db.table("calendar_events").select("id,starts_at")
-        .eq("workspace_id", ws).gte("starts_at", thirty_days_ago).execute().data or []
+        ctx.db.table("calendar_events")
+        .select("id,starts_at")
+        .eq("workspace_id", ws)
+        .gte("starts_at", thirty_days_ago)
+        .execute()
+        .data
+        or []
     )
 
     projects = (
-        ctx.db.table("projects").select("id,status,target_release_date")
-        .eq("workspace_id", ws).execute().data or []
+        ctx.db.table("projects")
+        .select("id,status,target_release_date")
+        .eq("workspace_id", ws)
+        .execute()
+        .data
+        or []
     )
 
     release_plans = (
-        ctx.db.table("release_plans").select("id,status")
-        .eq("workspace_id", ws).execute().data or []
+        ctx.db.table("release_plans").select("id,status").eq("workspace_id", ws).execute().data
+        or []
     )
 
     milestones = (
         ctx.db.table("release_milestones")
         .select("id,status,release_plan_id,release_plans!inner(workspace_id)")
-        .eq("release_plans.workspace_id", ws).execute().data or []
+        .eq("release_plans.workspace_id", ws)
+        .execute()
+        .data
+        or []
     )
 
     campaigns = (
-        ctx.db.table("campaigns").select("id,status")
-        .eq("workspace_id", ws).execute().data or []
+        ctx.db.table("campaigns").select("id,status").eq("workspace_id", ws).execute().data or []
     )
 
     content = (
-        ctx.db.table("content_pieces").select("id,status,scheduled_at")
-        .eq("workspace_id", ws).execute().data or []
+        ctx.db.table("content_pieces")
+        .select("id,status,scheduled_at")
+        .eq("workspace_id", ws)
+        .execute()
+        .data
+        or []
     )
 
     members = (
-        ctx.db.table("workspace_members").select("user_id,role")
-        .eq("workspace_id", ws).execute().data or []
+        ctx.db.table("workspace_members")
+        .select("user_id,role")
+        .eq("workspace_id", ws)
+        .execute()
+        .data
+        or []
     )
 
-    budgets = (
-        ctx.db.table("budgets").select("id")
-        .eq("workspace_id", ws).execute().data or []
-    )
+    budgets = ctx.db.table("budgets").select("id").eq("workspace_id", ws).execute().data or []
 
     catalogue = (
-        ctx.db.table("catalogue_items").select("id")
-        .eq("workspace_id", ws).execute().data or []
+        ctx.db.table("catalogue_items").select("id").eq("workspace_id", ws).execute().data or []
     )
 
     # ---------- 1. Consistency (regular activity) ----------
@@ -103,9 +123,9 @@ def _compute_score(ctx: WorkspaceContext) -> dict:
         has_project = len([t for t in all_tasks if t.get("project_id")])
         has_priority = len([t for t in all_tasks if t.get("priority") and t["priority"] != "low"])
         organization = _clamp(
-            (has_due / total_tasks) * 40 +
-            (has_project / total_tasks) * 35 +
-            (has_priority / total_tasks) * 25
+            (has_due / total_tasks) * 40
+            + (has_project / total_tasks) * 35
+            + (has_priority / total_tasks) * 25
         )
     else:
         organization = 0
@@ -134,8 +154,12 @@ def _compute_score(ctx: WorkspaceContext) -> dict:
     if total_campaigns == 0 and total_content == 0:
         marketing = 0
     else:
-        camp_score = min(total_campaigns, 5) / 5 * 40 + (active_campaigns / max(total_campaigns, 1)) * 10
-        content_score = min(total_content, 20) / 20 * 30 + (scheduled_content / max(total_content, 1)) * 20
+        camp_score = (
+            min(total_campaigns, 5) / 5 * 40 + (active_campaigns / max(total_campaigns, 1)) * 10
+        )
+        content_score = (
+            min(total_content, 20) / 20 * 30 + (scheduled_content / max(total_content, 1)) * 20
+        )
         marketing = _clamp(camp_score + content_score)
 
     # ---------- 5. Collaboration ----------
@@ -145,10 +169,7 @@ def _compute_score(ctx: WorkspaceContext) -> dict:
     if member_count <= 1:
         collaboration = 20  # Solo — baseline
     else:
-        collaboration = _clamp(
-            min(member_count, 8) / 8 * 60 +
-            min(unique_roles, 4) / 4 * 40
-        )
+        collaboration = _clamp(min(member_count, 8) / 8 * 60 + min(unique_roles, 4) / 4 * 40)
 
     # ---------- 6. Business Readiness ----------
     # Has budgets + catalogue items + release plans + projects with release dates
@@ -163,12 +184,12 @@ def _compute_score(ctx: WorkspaceContext) -> dict:
 
     # ---------- Overall ----------
     overall = _clamp(
-        consistency * 0.20 +
-        organization * 0.15 +
-        execution * 0.25 +
-        marketing * 0.15 +
-        collaboration * 0.10 +
-        business_readiness * 0.15
+        consistency * 0.20
+        + organization * 0.15
+        + execution * 0.25
+        + marketing * 0.15
+        + collaboration * 0.10
+        + business_readiness * 0.15
     )
 
     return {
@@ -185,15 +206,47 @@ def _compute_score(ctx: WorkspaceContext) -> dict:
 @router.get("/gravity-score")
 def get_gravity_score(ctx: WorkspaceContext = Depends(get_workspace_context)) -> Optional[dict]:
     rows = (
-        ctx.db.table("gravity_scores").select("*")
-        .eq("workspace_id", ctx.workspace_id).order("computed_at", desc=True).limit(1).execute().data or []
+        ctx.db.table("gravity_scores")
+        .select("*")
+        .eq("workspace_id", ctx.workspace_id)
+        .order("computed_at", desc=True)
+        .limit(1)
+        .execute()
+        .data
+        or []
     )
     return rows[0] if rows else None
 
 
 @router.post("/gravity-score/compute")
-def compute_gravity_score(ctx: WorkspaceContext = Depends(get_workspace_context)) -> dict:
+def compute_gravity_score(ctx: WorkspaceContext = Depends(require_writer)) -> dict:
     """Calculate and store a fresh Gravity Score snapshot."""
+    # Avoid repeated expensive service-role writes from a single workspace.
+    latest = (
+        ctx.db.table("gravity_scores")
+        .select("computed_at")
+        .eq("workspace_id", ctx.workspace_id)
+        .order("computed_at", desc=True)
+        .limit(1)
+        .execute()
+        .data
+        or []
+    )
+    if latest:
+        try:
+            computed_at = datetime.fromisoformat(latest[0]["computed_at"].replace("Z", "+00:00"))
+            if datetime.now(timezone.utc) - computed_at < timedelta(minutes=5):
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail={
+                        "error": {
+                            "code": "score_cooldown",
+                            "message": "Gravity Score was computed recently",
+                        }
+                    },
+                )
+        except ValueError:
+            pass
     scores = _compute_score(ctx)
     row = {
         "workspace_id": ctx.workspace_id,

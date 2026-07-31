@@ -9,6 +9,7 @@ against the project's public JWKS. Legacy projects sign symmetrically (HS256)
 with the shared JWT secret. We support both: the token header's `alg` decides
 which path to use.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -60,12 +61,16 @@ def verify_token(token: str) -> dict:
     try:
         header = jwt.get_unverified_header(token)
         alg = header.get("alg", "")
-        if alg.startswith("HS"):
+        # Supabase currently uses ES256 (new projects) or HS256 (legacy).
+        # Never accept an algorithm advertised by an untrusted token header.
+        if alg not in {"ES256", "HS256"}:
+            raise JWTError("unsupported JWT algorithm")
+        if alg == "HS256":
             key = settings.supabase_jwt_secret
             algorithms = ["HS256"]
         else:
             key = _signing_key(header.get("kid", ""))
-            algorithms = [alg]
+            algorithms = ["ES256"]
         return jwt.decode(
             token,
             key,

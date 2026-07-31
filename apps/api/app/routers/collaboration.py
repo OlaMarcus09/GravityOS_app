@@ -1,4 +1,5 @@
 """Project/task comments, mentions, and workspace activity."""
+
 from __future__ import annotations
 
 import re
@@ -9,14 +10,33 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.db import get_service_client
 from app.core.deps import WorkspaceContext, get_workspace_context, require_writer
+from app.core.rate_limit import check_rate_limit
 from app.schemas.collaboration import CommentCreate
 
 router = APIRouter(prefix="/collaboration", tags=["collaboration"])
 
-MENTION_PATTERN = re.compile(
-    r"@\[(?P<display>[^\]\r\n]{1,100})\]\((?P<user_id>[0-9a-fA-F-]{36})\)"
-)
+MENTION_PATTERN = re.compile(r"@\[(?P<display>[^\]\r\n]{1,100})\]\((?P<user_id>[0-9a-fA-F-]{36})\)")
 TARGET_TABLES = {"project": "projects", "task": "tasks"}
+
+
+def _attach_profiles(rows: list[dict], foreign_key: str, output_key: str) -> list[dict]:
+    """Hydrate only collaboration-safe profile fields via the service client."""
+    ids = {row.get(foreign_key) for row in rows if row.get(foreign_key)}
+    profiles: dict[str, dict] = {}
+    if ids:
+        data = (
+            get_service_client()
+            .table("profiles")
+            .select("id,display_name,avatar_url")
+            .in_("id", list(ids))
+            .execute()
+            .data
+            or []
+        )
+        profiles = {profile["id"]: profile for profile in data}
+    for row in rows:
+        row[output_key] = profiles.get(row.get(foreign_key))
+    return rows
 
 
 def _target_or_404(ctx: WorkspaceContext, target_type: str, target_id: str) -> dict:
@@ -36,18 +56,27 @@ def _target_or_404(ctx: WorkspaceContext, target_type: str, target_id: str) -> d
     return row.data
 
 
-def _activity(*, ctx: WorkspaceContext, event_type: str, target_type: str,
-              target_id: str, summary: str, metadata: dict | None = None) -> None:
+def _activity(
+    *,
+    ctx: WorkspaceContext,
+    event_type: str,
+    target_type: str,
+    target_id: str,
+    summary: str,
+    metadata: dict | None = None,
+) -> None:
     try:
-        get_service_client().table("workspace_activity_events").insert({
-            "workspace_id": ctx.workspace_id,
-            "actor_id": ctx.auth.user_id,
-            "event_type": event_type,
-            "target_type": target_type,
-            "target_id": target_id,
-            "summary": summary,
-            "metadata": metadata or {},
-        }).execute()
+        get_service_client().table("workspace_activity_events").insert(
+            {
+                "workspace_id": ctx.workspace_id,
+                "actor_id": ctx.auth.user_id,
+                "event_type": event_type,
+                "target_type": target_type,
+                "target_id": target_id,
+                "summary": summary,
+                "metadata": metadata or {},
+            }
+        ).execute()
     except Exception:
         # Audit delivery should not turn a successful comment action into a 500.
         return
@@ -79,20 +108,23 @@ def _notify_mentions(ctx: WorkspaceContext, body: str, comment: dict, target: di
             f"/{'projects' if comment['target_type'] == 'project' else 'tasks'}"
             f"?comments={comment['target_id']}"
         )
-        notifications = [{
-            "workspace_id": ctx.workspace_id,
-            "recipient_id": member["user_id"],
-            "kind": "comment_mention",
-            "title": "You were mentioned in a comment",
-            "message": f"You were mentioned on {target['title']}.",
-            "action_url": action_url,
-            "metadata": {
-                "comment_id": comment["id"],
-                "target_type": comment["target_type"],
-                "target_id": comment["target_id"],
-                "mentioned_by": ctx.auth.user_id,
-            },
-        } for member in members]
+        notifications = [
+            {
+                "workspace_id": ctx.workspace_id,
+                "recipient_id": member["user_id"],
+                "kind": "comment_mention",
+                "title": "You were mentioned in a comment",
+                "message": f"You were mentioned on {target['title']}.",
+                "action_url": action_url,
+                "metadata": {
+                    "comment_id": comment["id"],
+                    "target_type": comment["target_type"],
+                    "target_id": comment["target_id"],
+                    "mentioned_by": ctx.auth.user_id,
+                },
+            }
+            for member in members
+        ]
         if notifications:
             service.table("notifications").insert(notifications).execute()
     except Exception:
@@ -107,16 +139,18 @@ def list_comments(
     ctx: WorkspaceContext = Depends(get_workspace_context),
 ) -> list[dict]:
     _target_or_404(ctx, target_type, str(target_id))
-    result = (
+    rows = (
         ctx.db.table("comments")
-        .select("*, author:profiles!comments_author_id_fkey(id,display_name,avatar_url)")
+        .select("*")
         .eq("workspace_id", ctx.workspace_id)
         .eq("target_type", target_type)
         .eq("target_id", str(target_id))
         .order("created_at")
         .execute()
+        .data
+        or []
     )
-    return result.data or []
+    return _attach_profiles(rows, "author_id", "author")
 
 
 @router.post("/comments", status_code=status.HTTP_201_CREATED)
@@ -124,14 +158,21 @@ def create_comment(
     body: CommentCreate,
     ctx: WorkspaceContext = Depends(require_writer),
 ) -> dict:
+    check_rate_limit(f"comment:{ctx.workspace_id}:{ctx.auth.user_id}", limit=60)
     target = _target_or_404(ctx, body.target_type, str(body.target_id))
-    result = ctx.db.table("comments").insert({
-        "workspace_id": ctx.workspace_id,
-        "target_type": body.target_type,
-        "target_id": str(body.target_id),
-        "author_id": ctx.auth.user_id,
-        "body": body.body,
-    }).execute()
+    result = (
+        ctx.db.table("comments")
+        .insert(
+            {
+                "workspace_id": ctx.workspace_id,
+                "target_type": body.target_type,
+                "target_id": str(body.target_id),
+                "author_id": ctx.auth.user_id,
+                "body": body.body,
+            }
+        )
+        .execute()
+    )
     comment = result.data[0]
     comment["author"] = {
         "id": ctx.auth.user_id,
@@ -181,7 +222,12 @@ def delete_comment(
     if existing.data["author_id"] != ctx.auth.user_id and ctx.role not in ("owner", "admin"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail={"error": {"code": "forbidden", "message": "only the author or an admin can delete this comment"}},
+            detail={
+                "error": {
+                    "code": "forbidden",
+                    "message": "only the author or an admin can delete this comment",
+                }
+            },
         )
     ctx.db.table("comments").delete().eq("id", str(comment_id)).eq(
         "workspace_id", ctx.workspace_id
@@ -203,10 +249,9 @@ def list_activity(
     ctx: WorkspaceContext = Depends(get_workspace_context),
 ) -> list[dict]:
     query = (
-        ctx.db.table("workspace_activity_events")
-        .select("*, actor:profiles!workspace_activity_events_actor_id_fkey(id,display_name,avatar_url)")
-        .eq("workspace_id", ctx.workspace_id)
+        ctx.db.table("workspace_activity_events").select("*").eq("workspace_id", ctx.workspace_id)
     )
     if before:
         query = query.lt("created_at", before)
-    return query.order("created_at", desc=True).limit(limit).execute().data or []
+    rows = query.order("created_at", desc=True).limit(limit).execute().data or []
+    return _attach_profiles(rows, "actor_id", "actor")

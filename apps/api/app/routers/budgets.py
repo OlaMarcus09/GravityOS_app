@@ -6,6 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.deps import WorkspaceContext, get_workspace_context, require_pro
+from app.core.tenant_refs import validate_project_reference
 from app.schemas.budgets import BudgetCreate, BudgetItemCreate, BudgetItemUpdate, BudgetUpdate
 
 router = APIRouter(tags=["budgets"])
@@ -47,7 +48,10 @@ def list_budgets(
 
 @router.post("/budgets", status_code=status.HTTP_201_CREATED)
 def create_budget(body: BudgetCreate, ctx: WorkspaceContext = Depends(require_pro)) -> dict:
-    res = ctx.db.table("budgets").insert({**body.model_dump(exclude_none=True, mode="json"), "workspace_id": ctx.workspace_id}).execute()
+    payload = body.model_dump(exclude_none=True, mode="json")
+    if project_id := payload.get("project_id"):
+        validate_project_reference(ctx, project_id)
+    res = ctx.db.table("budgets").insert({**payload, "workspace_id": ctx.workspace_id}).execute()
     return res.data[0]
 
 

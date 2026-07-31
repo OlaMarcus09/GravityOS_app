@@ -4,6 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.core.deps import WorkspaceContext, get_workspace_context, require_pro
+from app.core.tenant_refs import validate_project_reference
 from app.schemas.releases import MilestoneCreate, MilestoneUpdate, ReleasePlanCreate, ReleasePlanUpdate
 
 router = APIRouter(tags=["releases"])
@@ -50,6 +51,7 @@ def get_release_plan(project_id: str, ctx: WorkspaceContext = Depends(get_worksp
 
 @router.post("/projects/{project_id}/release-plan", status_code=status.HTTP_201_CREATED)
 def create_release_plan(project_id: str, body: ReleasePlanCreate, ctx: WorkspaceContext = Depends(require_pro)) -> dict:
+    validate_project_reference(ctx, project_id)
     res = ctx.db.table("release_plans").insert({
         **body.model_dump(mode="json"),
         "project_id": project_id,

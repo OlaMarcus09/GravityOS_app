@@ -7,7 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.db import get_service_client
 from app.core.deps import WorkspaceContext, get_workspace_context, require_writer
-from app.schemas.tasks import TaskCreate, TaskOut, TaskUpdate
+from app.core.tenant_refs import validate_project_reference
+from app.schemas.tasks import TaskCreate, TaskUpdate
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -114,6 +115,8 @@ def list_tasks(
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_task(body: TaskCreate, ctx: WorkspaceContext = Depends(require_writer)) -> dict:
     payload = body.model_dump(exclude_none=True, mode="json")
+    if project_id := payload.get("project_id"):
+        validate_project_reference(ctx, project_id)
     if assignee_id := payload.get("assignee_id"):
         _validate_assignee(ctx, assignee_id)
     res = (
@@ -136,6 +139,8 @@ def update_task(task_id: str, body: TaskUpdate, ctx: WorkspaceContext = Depends(
         updates["assignee_id"] = None
     if not updates:
         return current
+    if project_id := updates.get("project_id"):
+        validate_project_reference(ctx, project_id)
     assignee_changed = (
         "assignee_id" in body.model_fields_set
         and updates.get("assignee_id") != current.get("assignee_id")
