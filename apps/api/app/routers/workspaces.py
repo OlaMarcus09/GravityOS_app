@@ -41,6 +41,26 @@ def _send_invitation_email(email: str) -> bool:
     except Exception:
         return False
 
+
+def _notify(*, workspace_id: str, kind: str, title: str, message: str,
+            recipient_id: str | None = None, recipient_email: str | None = None,
+            action_url: str | None = None, metadata: dict | None = None) -> None:
+    payload = {
+        "workspace_id": workspace_id,
+        "recipient_id": recipient_id,
+        "recipient_email": recipient_email.strip().lower() if recipient_email else None,
+        "kind": kind,
+        "title": title,
+        "message": message,
+        "action_url": action_url,
+        "metadata": metadata or {},
+    }
+    try:
+        get_service_client().table("notifications").insert(payload).execute()
+    except Exception:
+        # Notification delivery must not roll back the primary workspace action.
+        return
+
 def _require_super_admin(auth: AuthContext = Depends(get_auth_context)) -> AuthContext:
     if not auth.email or auth.email.lower() not in get_settings().super_admin_email_set:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
@@ -185,6 +205,15 @@ def create_invitation(body: MemberInvite, ctx: WorkspaceContext = Depends(requir
         }).execute()
     invitation = res.data[0]
     invitation["email_sent"] = _send_invitation_email(invitation["email"])
+    _notify(
+        workspace_id=ctx.workspace_id,
+        recipient_email=invitation["email"],
+        kind="workspace_invitation",
+        title="Workspace invitation",
+        message="You have been invited to join a Gravity OS workspace.",
+        action_url="/auth/invite",
+        metadata={"invitation_id": invitation["id"], "role": invitation["role"]},
+    )
     return invitation
 
 
@@ -201,6 +230,15 @@ def resend_invitation(invitation_id: str, ctx: WorkspaceContext = Depends(requir
                             detail={"error": {"code": "not_found", "message": "pending invitation not found"}})
     invitation = res.data[0]
     invitation["email_sent"] = _send_invitation_email(invitation["email"])
+    _notify(
+        workspace_id=ctx.workspace_id,
+        recipient_email=invitation["email"],
+        kind="workspace_invitation_resent",
+        title="Workspace invitation resent",
+        message="Your Gravity OS workspace invitation has been renewed.",
+        action_url="/auth/invite",
+        metadata={"invitation_id": invitation["id"], "role": invitation["role"]},
+    )
     return invitation
 
 
@@ -222,6 +260,15 @@ def update_member(user_id: str, body: MemberUpdate, ctx: WorkspaceContext = Depe
     if not res.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail={"error": {"code": "not_found", "message": "member not found"}})
+    _notify(
+        workspace_id=ctx.workspace_id,
+        recipient_id=user_id,
+        kind="role_changed",
+        title="Your workspace role changed",
+        message=f"Your role is now {body.role}.",
+        action_url="/team",
+        metadata={"role": body.role},
+    )
     return res.data[0]
 
 

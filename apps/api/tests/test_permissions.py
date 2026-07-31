@@ -117,7 +117,7 @@ def test_create_invitation_handles_missing_existing_invite_response():
 
     assert result["id"] == "invite-1"
     assert result["email_sent"] is True
-    query.insert.assert_called_once()
+    assert query.insert.call_args_list[0].args[0]["email"] == "new@example.com"
 
 
 def test_accept_invitation_returns_created_membership_and_workspace():

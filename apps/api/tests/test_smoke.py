@@ -40,6 +40,9 @@ def test_expected_routes_registered():
     paths = set(app.openapi()["paths"].keys())
     expected = {
         "/api/v1/me",
+        "/api/v1/notifications",
+        "/api/v1/notifications/read-all",
+        "/api/v1/notifications/{notification_id}/read",
         "/api/v1/workspaces",
         "/api/v1/workspaces/invitations/pending",
         "/api/v1/workspaces/invitations/{invitation_id}/accept",

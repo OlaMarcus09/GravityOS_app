@@ -20,6 +20,7 @@ from app.routers import (
     intelligence,
     marketing,
     me,
+    notifications,
     projects,
     releases,
     tasks,
@@ -80,6 +81,7 @@ def create_app() -> FastAPI:
     v1 = APIRouter(prefix=API_PREFIX)
     for module in (
         me,
+        notifications,
         workspaces,
         projects,
         tasks,

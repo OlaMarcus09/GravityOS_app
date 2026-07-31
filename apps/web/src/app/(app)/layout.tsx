@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { Avatar, GravityMark } from "@/components/ui";
+import { NotificationsBell } from "@/components/NotificationsBell";
 import { useMe } from "@/lib/queries/useMe";
 import { supabase } from "@/lib/supabase";
 import { useWorkspace } from "@/lib/workspace";
@@ -328,7 +329,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="app-main">{children}</main>
+        <main className="app-main"><div className="app-notification-bar"><NotificationsBell /></div>{children}</main>
       </div>
 
       {/* Mobile-only bottom tab bar — 7 icon tabs, active tab shows its label. */}
