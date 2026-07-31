@@ -169,6 +169,55 @@ export const notificationsApi = {
   dismiss: (id: string) => apiFetch<void>(`/notifications/${id}`, { method: "DELETE" }),
 };
 
+// --- Collaboration ---------------------------------------------------------
+
+export type CollaborationTarget = "project" | "task";
+
+export type CollaborationProfile = {
+  display_name: string | null;
+  avatar_url: string | null;
+};
+
+export type CollaborationComment = {
+  id: string;
+  workspace_id: string;
+  target_type: CollaborationTarget;
+  target_id: string;
+  author_id: string;
+  body: string;
+  created_at: string;
+  updated_at: string | null;
+  author?: (CollaborationProfile & { id: string }) | null;
+};
+
+export type ActivityItem = {
+  id: string;
+  workspace_id: string;
+  actor_id: string | null;
+  event_type: string;
+  target_type: CollaborationTarget | null;
+  target_id: string | null;
+  summary: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  actor?: (CollaborationProfile & { id: string }) | null;
+};
+
+export const collaborationApi = {
+  comments: (ws: string, targetType: CollaborationTarget, targetId: string) => {
+    const params = new URLSearchParams({ target_type: targetType, target_id: targetId });
+    return apiFetch<CollaborationComment[]>(`/collaboration/comments?${params}`, { workspaceId: ws });
+  },
+  createComment: (
+    ws: string,
+    body: { target_type: CollaborationTarget; target_id: string; body: string },
+  ) => apiFetch<CollaborationComment>("/collaboration/comments", { method: "POST", body, workspaceId: ws }),
+  removeComment: (ws: string, id: string) =>
+    apiFetch<void>(`/collaboration/comments/${id}`, { method: "DELETE", workspaceId: ws }),
+  activity: (ws: string, limit = 100) =>
+    apiFetch<ActivityItem[]>(`/collaboration/activity?limit=${limit}`, { workspaceId: ws }),
+};
+
 // --- Tasks -----------------------------------------------------------------
 
 export type TaskStatus = "todo" | "in_progress" | "blocked" | "done";
@@ -195,6 +244,7 @@ export type TaskInput = {
   status?: TaskStatus;
   priority?: Priority;
   due_date?: string | null;
+  assignee_id?: string | null;
 };
 
 export const tasksApi = {

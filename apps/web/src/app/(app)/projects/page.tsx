@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
+import { CommentsPanel } from "@/components/CommentsPanel";
 import type { Project, ProjectInput, ProjectStatus } from "@/lib/api";
 import { useProjects, useProjectMutations } from "@/lib/queries/useProjects";
 import { useWorkspace } from "@/lib/workspace";
@@ -32,6 +33,13 @@ export default function ProjectsPage() {
 
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
+  const [commenting, setCommenting] = useState<Project | null>(null);
+
+  useEffect(() => {
+    if (!data) return;
+    const targetId = new URLSearchParams(window.location.search).get("comments");
+    if (targetId) setCommenting(data.find((project) => project.id === targetId) ?? null);
+  }, [data]);
 
   const openCreate = () => {
     setEditing(null);
@@ -87,12 +95,15 @@ export default function ProjectsPage() {
                   {p.description}
                 </p>
               )}
-              <div style={{ display: "flex", gap: "0.35rem", marginTop: "auto", paddingTop: "0.4rem" }}>
+              <div className="project-card-actions" style={{ display: "flex", gap: "0.35rem", marginTop: "auto", paddingTop: "0.4rem" }}>
                 <Link href={`/projects/${p.id}/release-plan`} style={{ flex: 1 }}>
                   <Button size="sm" variant="ghost" style={{ width: "100%" }}>
                     Release plan
                   </Button>
                 </Link>
+                <Button size="sm" variant="ghost" onClick={() => setCommenting(p)}>
+                  Comments
+                </Button>
                 {!isReadOnly && (
                   <>
                     <Button size="sm" variant="ghost" onClick={() => openEdit(p)}>
@@ -118,6 +129,9 @@ export default function ProjectsPage() {
           pending={create.isPending || update.isPending}
           error={mutationError}
         />
+      </Modal>
+      <Modal open={Boolean(commenting)} onClose={() => setCommenting(null)} title={commenting ? `${commenting.title} · Comments` : "Comments"}>
+        {commenting && <CommentsPanel targetType="project" targetId={commenting.id} />}
       </Modal>
     </div>
   );

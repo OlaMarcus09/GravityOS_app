@@ -16,6 +16,7 @@ from app.routers import (
     budgets,
     calendar,
     catalogue,
+    collaboration,
     dashboard,
     intelligence,
     marketing,
@@ -82,6 +83,7 @@ def create_app() -> FastAPI:
     for module in (
         me,
         notifications,
+        collaboration,
         workspaces,
         projects,
         tasks,

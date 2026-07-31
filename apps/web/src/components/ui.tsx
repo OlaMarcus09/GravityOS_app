@@ -7,10 +7,10 @@ import type { CSSProperties, ReactNode } from "react";
 
 // --- Card ------------------------------------------------------------------
 
-export function Card({ children, style }: { children: ReactNode; style?: CSSProperties }) {
+export function Card({ children, style, className }: { children: ReactNode; style?: CSSProperties; className?: string }) {
   return (
     <div
-      className="glass"
+      className={`glass${className ? ` ${className}` : ""}`}
       style={{
         padding: "1.25rem",
         ...style,
@@ -552,4 +552,3 @@ export function OrbitMap({ nodes, size = 260 }: { nodes: OrbitNode[]; size?: num
     </div>
   );
 }
-
