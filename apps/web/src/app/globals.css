@@ -392,6 +392,20 @@ h2 {
   flex-wrap: wrap;
 }
 
+/* Invitation forms stay usable on phones instead of forcing horizontal scroll. */
+.team-invite-form {
+  min-width: 0;
+}
+
+.team-invite-form > * {
+  min-width: 0;
+}
+
+.team-list-copy {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 768px) {
   .split-2 {
     grid-template-columns: 1fr;
@@ -408,6 +422,33 @@ h2 {
   .page-head {
     align-items: flex-start;
     margin-bottom: 1.1rem;
+  }
+  .team-invite-form {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .team-invite-form button {
+    width: 100%;
+  }
+  .team-invite-actions {
+    width: 100%;
+  }
+  .team-invite-actions button {
+    flex: 1;
+  }
+  .team-list-row {
+    align-items: stretch !important;
+  }
+  .team-list-copy,
+  .team-member-actions {
+    width: 100%;
+  }
+  .team-member-actions select,
+  .team-member-actions button {
+    flex: 1;
+    width: auto !important;
+  }
+  .team-accept-button {
+    width: 100%;
   }
 }
 

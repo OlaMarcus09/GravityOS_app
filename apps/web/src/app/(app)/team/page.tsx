@@ -53,12 +53,12 @@ export default function TeamPage() {
             const label = member.profiles?.display_name || member.user_id.slice(0, 8);
             const isOwner = member.role === "owner";
             return (
-              <div key={member.user_id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap", padding: "0.7rem 0", borderBottom: "1px solid var(--border)" }}>
-                <div>
+              <div key={member.user_id} className="team-list-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap", padding: "0.7rem 0", borderBottom: "1px solid var(--border)" }}>
+                <div className="team-list-copy">
                   <strong>{label}</strong>
                   <p style={{ margin: "0.2rem 0 0", color: "var(--muted)", fontSize: "0.78rem" }}>{member.joined_at ? `Joined ${new Date(member.joined_at).toLocaleDateString()}` : "Workspace member"}</p>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                <div className="team-member-actions" style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
                   {isOwner || !canManage ? (
                     <Badge tone={isOwner ? "accent" : "neutral"}>{member.role}</Badge>
                   ) : (
@@ -83,7 +83,7 @@ export default function TeamPage() {
         <span className="eyebrow">Invite someone</span>
         {canManage ? (
           <>
-            <div style={{ display: "grid", gridTemplateColumns: "minmax(180px, 1fr) 140px auto", gap: "0.7rem", marginTop: "0.9rem" }}>
+            <div className="team-invite-form" style={{ display: "grid", gridTemplateColumns: "minmax(180px, 1fr) 140px auto", gap: "0.7rem", marginTop: "0.9rem" }}>
               <Field label="Email"><Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="collaborator@example.com" /></Field>
               <Field label="Role"><Select value={inviteRole} onChange={(event) => setInviteRole(event.target.value as typeof inviteRole)}><option value="member">Member</option><option value="admin">Admin</option><option value="viewer">Viewer</option></Select></Field>
               <Button onClick={sendInvite} disabled={!email.trim() || invitationMutations.create.isPending} style={{ alignSelf: "end" }}>{invitationMutations.create.isPending ? "Sending..." : "Send invite"}</Button>
@@ -97,11 +97,11 @@ export default function TeamPage() {
         <span className="eyebrow">Pending invitations</span>
         <ErrorText error={invites.error} />
         {pendingInvites.length === 0 && <p style={{ color: "var(--muted)", marginBottom: 0 }}>No pending invitations.</p>}
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.7rem", marginTop: "0.9rem" }}>
+        <div className="team-invite-list" style={{ display: "flex", flexDirection: "column", gap: "0.7rem", marginTop: "0.9rem" }}>
           {pendingInvites.map((invite) => (
-            <div key={invite.id} style={{ display: "flex", justifyContent: "space-between", gap: "1rem", alignItems: "center", flexWrap: "wrap" }}>
-              <div><strong>{invite.email}</strong><p style={{ margin: "0.2rem 0 0", color: "var(--muted)", fontSize: "0.78rem" }}>{invite.role} · expires {new Date(invite.expires_at).toLocaleDateString()}</p></div>
-              {canManage && <div style={{ display: "flex", gap: "0.5rem" }}><Button size="sm" variant="ghost" onClick={() => invitationMutations.resend.mutate(invite.id)}>Resend</Button><Button size="sm" variant="danger" onClick={() => invitationMutations.revoke.mutate(invite.id)}>Revoke</Button></div>}
+            <div key={invite.id} className="team-list-row" style={{ display: "flex", justifyContent: "space-between", gap: "1rem", alignItems: "center", flexWrap: "wrap" }}>
+              <div className="team-list-copy"><strong>{invite.email}</strong><p style={{ margin: "0.2rem 0 0", color: "var(--muted)", fontSize: "0.78rem" }}>{invite.role} · expires {new Date(invite.expires_at).toLocaleDateString()}</p></div>
+              {canManage && <div className="team-invite-actions" style={{ display: "flex", gap: "0.5rem" }}><Button size="sm" variant="ghost" onClick={() => invitationMutations.resend.mutate(invite.id)}>Resend</Button><Button size="sm" variant="danger" onClick={() => invitationMutations.revoke.mutate(invite.id)}>Revoke</Button></div>}
             </div>
           ))}
         </div>
