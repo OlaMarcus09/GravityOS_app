@@ -58,7 +58,7 @@ def get_workspace_context(
         .maybe_single()
         .execute()
     )
-    if not member.data:
+    if not member or not member.data:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={"error": {"code": "not_a_member", "message": "not a workspace member"}},

@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     super_admin_emails: str = Field(
         default="olawalemarcus92@gmail.com", alias="SUPER_ADMIN_EMAILS"
     )
+    web_app_url: str = Field(default="http://localhost:3000", alias="WEB_APP_URL")
 
     environment: str = Field(default="development", alias="ENVIRONMENT")
 

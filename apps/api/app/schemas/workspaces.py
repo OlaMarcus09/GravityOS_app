@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import Optional
+import re
+from typing import Literal, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 class WorkspaceCreate(BaseModel):
@@ -16,9 +17,17 @@ class WorkspaceUpdate(BaseModel):
 
 
 class MemberInvite(BaseModel):
-    user_id: str
-    role: str = "member"
+    email: str
+    role: Literal["admin", "member", "viewer"] = "member"
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", normalized):
+            raise ValueError("enter a valid email address")
+        return normalized
 
 
 class MemberUpdate(BaseModel):
-    role: str
+    role: Literal["admin", "member", "viewer"]

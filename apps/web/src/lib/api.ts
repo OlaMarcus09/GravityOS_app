@@ -58,6 +58,10 @@ export async function apiFetch<T>(path: string, opts: ApiOptions = {}): Promise<
     throw new ApiError(res.status, message, code);
   }
 
+  if (res.status === 204) {
+    return undefined as T;
+  }
+
   return res.json() as Promise<T>;
 }
 
@@ -97,6 +101,31 @@ export type ProfileInput = {
 export function updateProfile(body: ProfileInput) {
   return apiFetch<MeResponse>("/me", { method: "PATCH", body });
 }
+
+export type WorkspaceInvitation = {
+  id: string;
+  workspace_id: string;
+  email: string;
+  role: "admin" | "member" | "viewer";
+  invited_at: string;
+  expires_at: string;
+  accepted_at: string | null;
+  revoked_at: string | null;
+  email_sent?: boolean;
+  workspaces?: { name: string } | null;
+};
+
+export const invitationsApi = {
+  pending: () => apiFetch<WorkspaceInvitation[]>("/workspaces/invitations/pending"),
+  list: (ws: string) => apiFetch<WorkspaceInvitation[]>(`/workspaces/${ws}/invitations`, { workspaceId: ws }),
+  create: (ws: string, body: { email: string; role: WorkspaceInvitation["role"] }) =>
+    apiFetch<WorkspaceInvitation>(`/workspaces/${ws}/invitations`, { method: "POST", body, workspaceId: ws }),
+  accept: (id: string) => apiFetch<{ workspace_id: string }>(`/workspaces/invitations/${id}/accept`, { method: "POST" }),
+  resend: (ws: string, id: string) =>
+    apiFetch<WorkspaceInvitation>(`/workspaces/${ws}/invitations/${id}/resend`, { method: "POST", workspaceId: ws }),
+  revoke: (ws: string, id: string) =>
+    apiFetch<void>(`/workspaces/${ws}/invitations/${id}`, { method: "DELETE", workspaceId: ws }),
+};
 
 // --- Tasks -----------------------------------------------------------------
 

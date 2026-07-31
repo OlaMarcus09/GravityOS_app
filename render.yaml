@@ -23,6 +23,8 @@ services:
         value: authenticated
       - key: CORS_ORIGINS
         sync: false
+      - key: WEB_APP_URL
+        sync: false
       - key: ENVIRONMENT
         value: production
       - key: STRIPE_SECRET_KEY

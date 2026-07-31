@@ -6,6 +6,7 @@ GET /{id} returns a signed download URL. Files never stream through the API.
 from __future__ import annotations
 
 from typing import Optional
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
@@ -22,6 +23,11 @@ from app.schemas.catalogue import CatalogueItemCreate, CatalogueItemUpdate
 router = APIRouter(prefix="/catalogue", tags=["catalogue"])
 
 _STORAGE_BUCKET = "catalogue"
+
+
+def _new_storage_path(workspace_id: str) -> str:
+    """Return an opaque, workspace-scoped path that cannot collide by title."""
+    return f"{workspace_id}/{uuid4()}"
 
 
 def _get_or_404(ctx: WorkspaceContext, item_id: str) -> dict:
@@ -62,7 +68,7 @@ def create_catalogue_item(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail={"error": {"code": "plan_limit", "message": f"free plan allows {limit} catalogue items"}},
             )
-    storage_path = f"{ctx.workspace_id}/{body.title.replace(' ', '_')}"
+    storage_path = _new_storage_path(ctx.workspace_id)
     svc = get_service_client()
     signed = svc.storage.from_(_STORAGE_BUCKET).create_signed_upload_url(storage_path)
     payload = body.model_dump(exclude_none=True, mode="json")
@@ -90,5 +96,19 @@ def update_catalogue_item(item_id: str, body: CatalogueItemUpdate, ctx: Workspac
 
 @router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_catalogue_item(item_id: str, ctx: WorkspaceContext = Depends(require_writer)) -> None:
-    _get_or_404(ctx, item_id)
+    item = _get_or_404(ctx, item_id)
+    svc = get_service_client()
+    try:
+        svc.storage.from_(_STORAGE_BUCKET).remove([item["storage_path"]])
+    except Exception as exc:
+        # Keep the metadata when storage deletion fails so the cleanup can be retried.
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail={
+                "error": {
+                    "code": "storage_delete_failed",
+                    "message": "catalogue file could not be deleted; please try again",
+                }
+            },
+        ) from exc
     ctx.db.table("catalogue_items").delete().eq("id", item_id).eq("workspace_id", ctx.workspace_id).execute()

@@ -41,6 +41,8 @@ def test_expected_routes_registered():
     expected = {
         "/api/v1/me",
         "/api/v1/workspaces",
+        "/api/v1/workspaces/invitations/pending",
+        "/api/v1/workspaces/{workspace_id}/invitations",
         "/api/v1/projects",
         "/api/v1/tasks",
         "/api/v1/calendar",

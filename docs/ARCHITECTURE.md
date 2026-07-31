@@ -513,11 +513,12 @@ These items describe the current engineering boundary, not completed behavior:
 5. **Frontend build health:** local typechecking currently fails inside generated
    `.next` types due to a Next.js type-resolution issue. CI and clean-install
    production builds must be made reliable.
-6. **Catalogue lifecycle:** deleting catalogue metadata does not currently remove
-   the corresponding Storage object, and storage paths are based on titles rather
-   than collision-resistant object IDs.
-7. **Team invitations:** the API adds an existing user by UUID; email invitation,
-   pending invitation, acceptance, expiry, and resend flows are not implemented.
+6. **Catalogue lifecycle verification:** storage paths are collision-resistant
+   and deletion removes the object before metadata, but the binary lifecycle still
+   needs verification against the deployed Supabase bucket.
+7. **Team invitation verification:** email invitation, pending/acceptance, expiry,
+   resend, and revoke flows are implemented but still need deployed end-to-end
+   verification with the configured Supabase Auth mailer.
 8. **Billing:** pricing and gates exist, but checkout, customer portal, webhook
    verification, and automatic plan lifecycle do not.
 9. **AI Manager:** only the storage and retrieval contract exists; there is no LLM
@@ -542,7 +543,7 @@ These items describe the current engineering boundary, not completed behavior:
   immutable audit history. Workspace search, plan management, summary metrics,
   confirmation flows, and responsive loading/error states are implemented.
 - Implement Stripe checkout, portal, webhooks, and plan synchronization.
-- Replace manual UUID membership with an email invitation lifecycle.
+- Verify the email invitation lifecycle and Auth email delivery in production.
 - Add Team-specific organization and approval workflows.
 
 ### Phase 3 - Product intelligence and expansion
