@@ -30,6 +30,11 @@ begin
   ]
   loop
     execute format(
+      'drop trigger if exists trg_%s_workspace_immutable on public.%I',
+      tenant_table,
+      tenant_table
+    );
+    execute format(
       'create trigger trg_%s_workspace_immutable
          before update of workspace_id on public.%I
          for each row execute function public.prevent_workspace_reassignment()',
@@ -73,6 +78,11 @@ begin
   ]
   loop
     execute format(
+      'drop trigger if exists trg_%s_project_workspace on public.%I',
+      tenant_table,
+      tenant_table
+    );
+    execute format(
       'create trigger trg_%s_project_workspace
          before insert or update of project_id, workspace_id on public.%I
          for each row execute function public.enforce_project_workspace_reference()',
@@ -102,6 +112,7 @@ begin
 end;
 $$;
 
+drop trigger if exists trg_content_pieces_campaign_workspace on public.content_pieces;
 create trigger trg_content_pieces_campaign_workspace
 before insert or update of campaign_id, workspace_id on public.content_pieces
 for each row execute function public.enforce_campaign_workspace_reference();
