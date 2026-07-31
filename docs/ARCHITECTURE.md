@@ -517,7 +517,8 @@ These items describe the current engineering boundary, not completed behavior:
    and deletion removes the object before metadata, but the binary lifecycle still
    needs verification against the deployed Supabase bucket.
 7. **Team invitation verification:** email invitation, pending/acceptance, expiry,
-   resend, and revoke flows are implemented but still need deployed end-to-end
+   resend, revoke, and role propagation have local regression coverage. Auth
+   email delivery and the browser journey still need deployed end-to-end
    verification with the configured Supabase Auth mailer.
 8. **Billing:** pricing and gates exist, but checkout, customer portal, webhook
    verification, and automatic plan lifecycle do not.
@@ -543,7 +544,7 @@ These items describe the current engineering boundary, not completed behavior:
   immutable audit history. Workspace search, plan management, summary metrics,
   confirmation flows, and responsive loading/error states are implemented.
 - Implement Stripe checkout, portal, webhooks, and plan synchronization.
-- Verify the email invitation lifecycle and Auth email delivery in production.
+- Verify Auth invitation email delivery and the invite browser journey in production.
 - Add Team-specific organization and approval workflows.
 
 ### Phase 3 - Product intelligence and expansion
