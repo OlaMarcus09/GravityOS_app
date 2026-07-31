@@ -69,3 +69,41 @@ def test_collaboration_tables_are_tenant_scoped_and_activity_is_server_owned():
     assert "revoke insert, update, delete on public.workspace_activity_events from anon, authenticated" in sql
     assert "private.validate_collaboration_target" in sql
     assert "profiles_select_shared_workspace" in sql
+
+
+def test_cross_workspace_foreign_keys_have_database_guards():
+    sql = migration("0013_tenant_reference_integrity.sql").lower()
+
+    assert "prevent_workspace_reassignment" in sql
+    assert "workspace_id cannot be changed" in sql
+    for table in (
+        "tasks",
+        "calendar_events",
+        "release_plans",
+        "catalogue_items",
+        "budgets",
+        "campaigns",
+    ):
+        assert f"'{table}'" in sql
+    assert "trg_%s_project_workspace" in sql
+    assert "p.workspace_id = new.workspace_id" in sql
+    assert "trg_content_pieces_campaign_workspace" in sql
+    assert "c.workspace_id = new.workspace_id" in sql
+
+
+def test_owner_membership_is_protected_even_from_service_role_mutations():
+    sql = migration("0012_owner_membership_guards.sql").lower()
+
+    assert "before insert or update on public.workspace_members" in sql
+    assert "after delete on public.workspace_members" in sql
+    assert "workspace owner membership cannot be deleted" in sql
+    assert "workspace owner membership cannot be modified" in sql
+    assert "workspace owner must have the owner role" in sql
+    assert "owner role is reserved for the workspace owner" in sql
+
+
+def test_security_hardening_migration_contract():
+    sql = migration("0014_security_hardening.sql").lower()
+    assert "drop policy if exists profiles_select_shared_workspace" in sql
+    assert "sync_invitation_notification_recipient" in sql
+    assert "recipient_email = null" in sql

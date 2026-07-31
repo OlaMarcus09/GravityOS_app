@@ -18,6 +18,7 @@ from app.core.deps import (
     get_workspace_context,
     require_writer,
 )
+from app.core.tenant_refs import validate_project_reference
 from app.schemas.catalogue import CatalogueItemCreate, CatalogueItemUpdate
 
 router = APIRouter(prefix="/catalogue", tags=["catalogue"])
@@ -68,10 +69,12 @@ def create_catalogue_item(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail={"error": {"code": "plan_limit", "message": f"free plan allows {limit} catalogue items"}},
             )
+    payload = body.model_dump(exclude_none=True, mode="json")
+    if project_id := payload.get("project_id"):
+        validate_project_reference(ctx, project_id)
     storage_path = _new_storage_path(ctx.workspace_id)
     svc = get_service_client()
     signed = svc.storage.from_(_STORAGE_BUCKET).create_signed_upload_url(storage_path)
-    payload = body.model_dump(exclude_none=True, mode="json")
     payload["storage_path"] = storage_path
     res = ctx.db.table("catalogue_items").insert({**payload, "workspace_id": ctx.workspace_id}).execute()
     return {**res.data[0], "upload_url": signed.get("signedURL") or signed.get("signed_url")}
@@ -91,6 +94,8 @@ def update_catalogue_item(item_id: str, body: CatalogueItemUpdate, ctx: Workspac
     updates = body.model_dump(exclude_none=True, mode="json")
     if not updates:
         return _get_or_404(ctx, item_id)
+    if project_id := updates.get("project_id"):
+        validate_project_reference(ctx, project_id)
     return ctx.db.table("catalogue_items").update(updates).eq("id", item_id).eq("workspace_id", ctx.workspace_id).execute().data[0]
 
 

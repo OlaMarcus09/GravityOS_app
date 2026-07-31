@@ -12,11 +12,13 @@ from app.routers.projects import create_project
 from app.routers.workspaces import (
     accept_invitation,
     create_invitation,
+    remove_member,
     resend_invitation,
     revoke_invitation,
+    update_member,
 )
 from app.schemas.projects import ProjectCreate
-from app.schemas.workspaces import MemberInvite
+from app.schemas.workspaces import MemberInvite, MemberUpdate
 
 
 def workspace_context(*, role: str = "owner", plan: str = "free", db: Mock | None = None):
@@ -205,3 +207,117 @@ def test_revoke_invitation_marks_only_a_pending_workspace_invite():
     query.eq.assert_any_call("id", "invite-1")
     query.eq.assert_any_call("workspace_id", "workspace-1")
     query.is_.assert_called_once_with("accepted_at", "null")
+
+
+def member_service(member: dict | None, mutation_data: list[dict] | None = None):
+    select_query = Mock()
+    select_query.select.return_value = select_query
+    select_query.eq.return_value = select_query
+    select_query.maybe_single.return_value = select_query
+    select_query.execute.return_value = Mock(data=member) if member is not None else None
+
+    mutation_query = Mock()
+    mutation_query.update.return_value = mutation_query
+    mutation_query.delete.return_value = mutation_query
+    mutation_query.eq.return_value = mutation_query
+    mutation_query.execute.return_value = Mock(data=mutation_data or [])
+
+    service = Mock()
+    service.table.side_effect = [select_query, mutation_query]
+    return service, mutation_query
+
+
+@pytest.mark.parametrize("action", ["update", "remove"])
+def test_owner_membership_cannot_be_changed_or_removed(action):
+    service, mutation = member_service({"id": "membership-1", "user_id": "user-1", "role": "owner"})
+
+    with patch("app.routers.workspaces.get_service_client", return_value=service):
+        with pytest.raises(HTTPException) as exc_info:
+            if action == "update":
+                update_member("user-1", MemberUpdate(role="member"), workspace_context(role="owner"))
+            else:
+                remove_member("user-1", workspace_context(role="owner"))
+
+    assert exc_info.value.status_code == 409
+    assert exc_info.value.detail["error"]["code"] == "owner_protected"
+    mutation.update.assert_not_called()
+    mutation.delete.assert_not_called()
+
+
+@pytest.mark.parametrize("action", ["update", "remove"])
+def test_admin_cannot_manage_another_admin(action):
+    service, mutation = member_service({"id": "membership-2", "user_id": "user-2", "role": "admin"})
+
+    with patch("app.routers.workspaces.get_service_client", return_value=service):
+        with pytest.raises(HTTPException) as exc_info:
+            if action == "update":
+                update_member("user-2", MemberUpdate(role="member"), workspace_context(role="admin"))
+            else:
+                remove_member("user-2", workspace_context(role="admin"))
+
+    assert exc_info.value.status_code == 403
+    assert exc_info.value.detail["error"]["code"] == "owner_required"
+    mutation.update.assert_not_called()
+    mutation.delete.assert_not_called()
+
+
+@pytest.mark.parametrize("action", ["update", "remove"])
+def test_admin_cannot_change_or_remove_self(action):
+    service, mutation = member_service({"id": "membership-1", "user_id": "user-1", "role": "admin"})
+
+    with patch("app.routers.workspaces.get_service_client", return_value=service):
+        with pytest.raises(HTTPException) as exc_info:
+            if action == "update":
+                update_member("user-1", MemberUpdate(role="member"), workspace_context(role="admin"))
+            else:
+                remove_member("user-1", workspace_context(role="admin"))
+
+    assert exc_info.value.status_code == 409
+    assert exc_info.value.detail["error"]["code"] == "self_management_forbidden"
+    mutation.update.assert_not_called()
+    mutation.delete.assert_not_called()
+
+
+@pytest.mark.parametrize("action", ["update", "remove"])
+def test_member_management_returns_not_found_before_mutating(action):
+    service, mutation = member_service(None)
+
+    with patch("app.routers.workspaces.get_service_client", return_value=service):
+        with pytest.raises(HTTPException) as exc_info:
+            if action == "update":
+                update_member("missing-user", MemberUpdate(role="member"), workspace_context(role="owner"))
+            else:
+                remove_member("missing-user", workspace_context(role="owner"))
+
+    assert exc_info.value.status_code == 404
+    assert exc_info.value.detail["error"]["code"] == "not_found"
+    mutation.update.assert_not_called()
+    mutation.delete.assert_not_called()
+
+
+def test_owner_can_promote_member_to_admin():
+    updated = {"id": "membership-2", "user_id": "user-2", "role": "admin"}
+    service, mutation = member_service(
+        {"id": "membership-2", "user_id": "user-2", "role": "member"},
+        [updated],
+    )
+
+    with (
+        patch("app.routers.workspaces.get_service_client", return_value=service),
+        patch("app.routers.workspaces._notify") as notify,
+    ):
+        result = update_member("user-2", MemberUpdate(role="admin"), workspace_context(role="owner"))
+
+    assert result == updated
+    mutation.update.assert_called_once_with({"role": "admin"})
+    notify.assert_called_once()
+
+
+def test_admin_can_remove_regular_member():
+    deleted = {"id": "membership-2", "user_id": "user-2", "role": "member"}
+    service, mutation = member_service(deleted, [deleted])
+
+    with patch("app.routers.workspaces.get_service_client", return_value=service):
+        remove_member("user-2", workspace_context(role="admin"))
+
+    mutation.delete.assert_called_once_with()

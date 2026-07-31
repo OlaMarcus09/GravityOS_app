@@ -6,6 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.deps import WorkspaceContext, get_workspace_context, require_pro
+from app.core.tenant_refs import validate_project_reference
 from app.schemas.marketing import CampaignCreate, CampaignUpdate, ContentPieceCreate, ContentPieceUpdate
 
 router = APIRouter(tags=["marketing"])
@@ -43,7 +44,10 @@ def list_campaigns(
 
 @router.post("/campaigns", status_code=status.HTTP_201_CREATED)
 def create_campaign(body: CampaignCreate, ctx: WorkspaceContext = Depends(require_pro)) -> dict:
-    res = ctx.db.table("campaigns").insert({**body.model_dump(exclude_none=True, mode="json"), "workspace_id": ctx.workspace_id}).execute()
+    payload = body.model_dump(exclude_none=True, mode="json")
+    if project_id := payload.get("project_id"):
+        validate_project_reference(ctx, project_id)
+    res = ctx.db.table("campaigns").insert({**payload, "workspace_id": ctx.workspace_id}).execute()
     return res.data[0]
 
 
