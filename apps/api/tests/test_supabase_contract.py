@@ -76,6 +76,8 @@ def test_cross_workspace_foreign_keys_have_database_guards():
 
     assert "prevent_workspace_reassignment" in sql
     assert "workspace_id cannot be changed" in sql
+    assert "drop trigger if exists trg_%s_workspace_immutable" in sql
+    assert "drop trigger if exists trg_%s_project_workspace" in sql
     for table in (
         "tasks",
         "calendar_events",
