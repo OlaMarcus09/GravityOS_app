@@ -39,6 +39,12 @@ const NAV = [
   { href: "/settings", label: "Settings", icon: "M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" },
 ];
 
+const TEAM_NAV = {
+  href: "/team",
+  label: "Team",
+  icon: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7-3a4 4 0 0 1 0 8m4 5v-2a4 4 0 0 0-3-3.87",
+};
+
 const ADMIN_NAV = {
   href: "/admin",
   label: "Admin",
@@ -84,7 +90,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const displayName = me?.profile?.display_name ?? me?.email ?? "You";
   const role = memberships.find((m) => m.workspace_id === workspaceId)?.role;
-  const navigation = me?.capabilities.platform_admin ? [...NAV, ADMIN_NAV] : NAV;
+  const navigation = [
+    ...NAV,
+    ...(memberships.find((m) => m.workspace_id === workspaceId)?.workspaces?.plan === "team" ? [TEAM_NAV] : []),
+    ...(me?.capabilities.platform_admin ? [ADMIN_NAV] : []),
+  ];
 
   const signOut = async () => {
     await supabase.auth.signOut();

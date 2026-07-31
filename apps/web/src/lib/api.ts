@@ -115,6 +115,16 @@ export type WorkspaceInvitation = {
   workspaces?: { name: string } | null;
 };
 
+export type WorkspaceMember = {
+  id: string;
+  workspace_id: string;
+  user_id: string;
+  role: "owner" | "admin" | "member" | "viewer";
+  invited_at: string | null;
+  joined_at: string | null;
+  profiles?: { display_name: string | null; avatar_url: string | null } | null;
+};
+
 export const invitationsApi = {
   pending: () => apiFetch<WorkspaceInvitation[]>("/workspaces/invitations/pending"),
   list: (ws: string) => apiFetch<WorkspaceInvitation[]>(`/workspaces/${ws}/invitations`, { workspaceId: ws }),
@@ -125,6 +135,14 @@ export const invitationsApi = {
     apiFetch<WorkspaceInvitation>(`/workspaces/${ws}/invitations/${id}/resend`, { method: "POST", workspaceId: ws }),
   revoke: (ws: string, id: string) =>
     apiFetch<void>(`/workspaces/${ws}/invitations/${id}`, { method: "DELETE", workspaceId: ws }),
+};
+
+export const teamApi = {
+  members: (ws: string) => apiFetch<WorkspaceMember[]>(`/workspaces/${ws}/members`, { workspaceId: ws }),
+  updateMember: (ws: string, userId: string, role: WorkspaceMember["role"]) =>
+    apiFetch<WorkspaceMember>(`/workspaces/${ws}/members/${userId}`, { method: "PATCH", body: { role }, workspaceId: ws }),
+  removeMember: (ws: string, userId: string) =>
+    apiFetch<void>(`/workspaces/${ws}/members/${userId}`, { method: "DELETE", workspaceId: ws }),
 };
 
 // --- Tasks -----------------------------------------------------------------
