@@ -23,6 +23,7 @@ export function useTaskMutations() {
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["tasks", ws] });
     qc.invalidateQueries({ queryKey: ["calendar", ws] });
+    qc.invalidateQueries({ queryKey: ["collaboration", "activity", ws] });
   };
 
   const create = useMutation({

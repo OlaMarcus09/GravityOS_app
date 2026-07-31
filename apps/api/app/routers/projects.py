@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from app.core.db import get_service_client
 from app.core.deps import (
     PLAN_LIMITS,
     WorkspaceContext,
@@ -15,6 +16,21 @@ from app.schemas.projects import ProjectCreate, ProjectOut, ProjectUpdate
 router = APIRouter(prefix="/projects", tags=["projects"])
 
 _ACTIVE_STATUSES = ("idea", "in_progress", "ready", "released")
+
+
+def _record_activity(ctx: WorkspaceContext, project: dict, event_type: str) -> None:
+    try:
+        get_service_client().table("workspace_activity_events").insert({
+            "workspace_id": ctx.workspace_id,
+            "actor_id": ctx.auth.user_id,
+            "event_type": event_type,
+            "target_type": "project",
+            "target_id": project["id"],
+            "summary": project["title"],
+            "metadata": {"status": project.get("status"), "type": project.get("type")},
+        }).execute()
+    except Exception:
+        return
 
 
 def _get_or_404(ctx: WorkspaceContext, project_id: str) -> dict:
@@ -68,7 +84,9 @@ def create_project(
         .insert({**body.model_dump(exclude_none=True, mode="json"), "workspace_id": ctx.workspace_id, "created_by": ctx.auth.user_id})
         .execute()
     )
-    return res.data[0]
+    project = res.data[0]
+    _record_activity(ctx, project, "project_created")
+    return project
 
 
 @router.get("/{project_id}")
@@ -93,7 +111,9 @@ def update_project(
         .eq("workspace_id", ctx.workspace_id)
         .execute()
     )
-    return res.data[0]
+    project = res.data[0]
+    _record_activity(ctx, project, "project_updated")
+    return project
 
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)

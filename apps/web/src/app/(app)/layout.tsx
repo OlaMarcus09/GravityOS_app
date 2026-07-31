@@ -34,6 +34,7 @@ const NAV = [
   { href: "/calendar", label: "Calendar", icon: "M8 2v4M16 2v4M3 10h18M5 6h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1Z" },
   { href: "/tasks", label: "Tasks", icon: "M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" },
   { href: "/projects", label: "Projects", icon: "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 0v20M2 12h20" },
+  { href: "/activity", label: "Activity", icon: "M3 12h4l3-8 4 16 3-8h4" },
   { href: "/catalogue", label: "Vault", icon: "M4 4h16v16H4zM4 9h16M9 9v11" },
   { href: "/budget", label: "Finance", icon: "M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" },
   { href: "/marketing", label: "Marketing", icon: "M3 11l18-5v12L3 14v-3ZM11.6 16.8a3 3 0 1 1-5.8-1.6" },

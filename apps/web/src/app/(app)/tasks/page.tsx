@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import type { Task, TaskInput, TaskStatus } from "@/lib/api";
+import { CommentsPanel } from "@/components/CommentsPanel";
+import type { Task, TaskInput, TaskStatus, WorkspaceMember } from "@/lib/api";
+import { useTeamMembers } from "@/lib/queries/useTeam";
 import { useTasks, useTaskMutations } from "@/lib/queries/useTasks";
 import { useWorkspace } from "@/lib/workspace";
 import {
@@ -25,12 +27,20 @@ const STATUSES: TaskStatus[] = ["todo", "in_progress", "blocked", "done"];
 const PRIORITIES = ["low", "medium", "high"] as const;
 
 export default function TasksPage() {
-  const { isReadOnly } = useWorkspace();
+  const { isReadOnly, workspaceId } = useWorkspace();
   const { data, isLoading, error } = useTasks();
   const { create, update, remove } = useTaskMutations();
 
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
+  const [commenting, setCommenting] = useState<Task | null>(null);
+  const members = useTeamMembers(workspaceId);
+
+  useEffect(() => {
+    if (!data) return;
+    const targetId = new URLSearchParams(window.location.search).get("comments");
+    if (targetId) setCommenting(data.find((task) => task.id === targetId) ?? null);
+  }, [data]);
 
   const openCreate = () => {
     setEditing(null);
@@ -77,6 +87,7 @@ export default function TasksPage() {
           {data.map((t) => (
             <Card
               key={t.id}
+              className="task-list-row"
               style={{ padding: "0.85rem 1rem", display: "flex", alignItems: "center", gap: "0.85rem" }}
             >
               <input
@@ -102,6 +113,9 @@ export default function TasksPage() {
               </div>
               <Badge tone={toneFor(t.priority)}>{t.priority}</Badge>
               <Badge tone={toneFor(t.status)}>{t.status.replace("_", " ")}</Badge>
+              <Button size="sm" variant="ghost" onClick={() => setCommenting(t)}>
+                Comments
+              </Button>
               {!isReadOnly && (
                 <div style={{ display: "flex", gap: "0.35rem" }}>
                   <Button size="sm" variant="ghost" onClick={() => openEdit(t)}>
@@ -124,7 +138,11 @@ export default function TasksPage() {
         onSubmit={submit}
         pending={create.isPending || update.isPending}
         error={mutationError}
+        members={members.data ?? []}
       />
+      <Modal open={Boolean(commenting)} onClose={() => setCommenting(null)} title={commenting ? `${commenting.title} · Comments` : "Comments"}>
+        {commenting && <CommentsPanel targetType="task" targetId={commenting.id} />}
+      </Modal>
     </div>
   );
 }
@@ -136,6 +154,7 @@ function TaskModal({
   onSubmit,
   pending,
   error,
+  members,
 }: {
   open: boolean;
   onClose: () => void;
@@ -143,6 +162,7 @@ function TaskModal({
   onSubmit: (body: TaskInput) => void;
   pending: boolean;
   error: Error | null;
+  members: WorkspaceMember[];
 }) {
   return (
     <Modal open={open} onClose={onClose} title={editing ? "Edit task" : "New task"}>
@@ -153,6 +173,7 @@ function TaskModal({
         pending={pending}
         onSubmit={onSubmit}
         error={error}
+        members={members}
       />
     </Modal>
   );
@@ -164,18 +185,21 @@ function FormBody({
   onCancel,
   pending,
   error,
+  members,
 }: {
   initial: Task | null;
   onSubmit: (body: TaskInput) => void;
   onCancel: () => void;
   pending: boolean;
   error: Error | null;
+  members: WorkspaceMember[];
 }) {
   const [title, setTitle] = useState(initial?.title ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [status, setStatus] = useState<TaskStatus>(initial?.status ?? "todo");
   const [priority, setPriority] = useState(initial?.priority ?? "medium");
   const [dueDate, setDueDate] = useState(initial?.due_date ?? "");
+  const [assigneeId, setAssigneeId] = useState(initial?.assignee_id ?? "");
 
   const submit = () => {
     if (!title.trim()) return;
@@ -185,6 +209,7 @@ function FormBody({
       status,
       priority,
       due_date: dueDate || null,
+      assignee_id: assigneeId || null,
     });
   };
 
@@ -214,6 +239,16 @@ function FormBody({
       </div>
       <Field label="Due date">
         <Input type="date" value={dueDate ?? ""} onChange={(e) => setDueDate(e.target.value)} />
+      </Field>
+      <Field label="Assignee">
+        <Select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
+          <option value="">Unassigned</option>
+          {members.map((member) => (
+            <option key={member.user_id} value={member.user_id}>
+              {member.profiles?.display_name || "Team member"}
+            </option>
+          ))}
+        </Select>
       </Field>
       <ErrorText error={error} />
       <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "0.5rem" }}>

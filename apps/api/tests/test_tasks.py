@@ -1,0 +1,160 @@
+"""Task assignment collaboration behavior."""
+from __future__ import annotations
+
+from unittest.mock import Mock, patch
+
+import pytest
+from fastapi import HTTPException
+
+from app.core.auth import AuthContext
+from app.core.deps import WorkspaceContext
+from app.routers.tasks import create_task, update_task
+from app.schemas.tasks import TaskCreate, TaskUpdate
+
+ASSIGNEE_ID = "00000000-0000-0000-0000-000000000002"
+
+
+def _query(data) -> Mock:
+    query = Mock()
+    for method in ("select", "eq", "maybe_single", "insert", "update"):
+        getattr(query, method).return_value = query
+    query.execute.return_value = Mock(data=data)
+    return query
+
+
+def _context(db: Mock) -> WorkspaceContext:
+    return WorkspaceContext(
+        workspace_id="workspace-1",
+        role="member",
+        plan="team",
+        auth=AuthContext(user_id="user-1", email="user@example.com", token="token"),
+        db=db,
+    )
+
+
+def test_create_task_rejects_assignee_outside_workspace():
+    member_query = _query(None)
+    db = Mock()
+    db.table.return_value = member_query
+
+    with pytest.raises(HTTPException) as exc_info:
+        create_task(TaskCreate(title="Draft launch", assignee_id=ASSIGNEE_ID), _context(db))
+
+    assert exc_info.value.status_code == 422
+    assert exc_info.value.detail["error"]["code"] == "invalid_assignee"
+    member_query.insert.assert_not_called()
+
+
+def test_create_task_notifies_workspace_assignee_and_records_activity():
+    task = {
+        "id": "task-1",
+        "title": "Draft launch",
+        "project_id": "project-1",
+        "assignee_id": ASSIGNEE_ID,
+        "status": "todo",
+    }
+    member_query = _query({"user_id": ASSIGNEE_ID})
+    task_query = _query([task])
+    db = Mock()
+    db.table.side_effect = [member_query, task_query]
+    service_query = _query([{}])
+    service = Mock()
+    service.table.return_value = service_query
+
+    with patch("app.routers.tasks.get_service_client", return_value=service):
+        result = create_task(
+            TaskCreate(title="Draft launch", assignee_id=ASSIGNEE_ID),
+            _context(db),
+        )
+
+    assert result == task
+    assert service.table.call_args_list[0].args[0] == "workspace_activity_events"
+    assert service.table.call_args_list[1].args[0] == "notifications"
+    notification = service_query.insert.call_args_list[1].args[0]
+    assert notification["recipient_id"] == ASSIGNEE_ID
+    assert notification["kind"] == "task_assigned"
+    assert notification["metadata"]["task_id"] == "task-1"
+
+
+def test_update_task_notifies_only_when_assignee_changes():
+    current = {"id": "task-1", "title": "Draft launch", "assignee_id": None}
+    updated = {**current, "assignee_id": ASSIGNEE_ID, "status": "todo"}
+    get_query = _query(current)
+    member_query = _query({"user_id": ASSIGNEE_ID})
+    update_query = _query([updated])
+    db = Mock()
+    db.table.side_effect = [get_query, member_query, update_query]
+    service_query = _query([{}])
+    service = Mock()
+    service.table.return_value = service_query
+
+    with patch("app.routers.tasks.get_service_client", return_value=service):
+        result = update_task("task-1", TaskUpdate(assignee_id=ASSIGNEE_ID), _context(db))
+
+    assert result == updated
+    assert [call.args[0] for call in service.table.call_args_list] == [
+        "workspace_activity_events",
+        "notifications",
+    ]
+
+
+def test_update_task_does_not_notify_when_assignee_is_unchanged():
+    current = {"id": "task-1", "title": "Draft launch", "assignee_id": ASSIGNEE_ID}
+    updated = {**current, "status": "doing"}
+    get_query = _query(current)
+    update_query = _query([updated])
+    db = Mock()
+    db.table.side_effect = [get_query, update_query]
+    service = Mock()
+    service.table.return_value = _query([{}])
+
+    with patch("app.routers.tasks.get_service_client", return_value=service):
+        result = update_task("task-1", TaskUpdate(status="doing"), _context(db))
+
+    assert result == updated
+    assert [call.args[0] for call in service.table.call_args_list] == [
+        "workspace_activity_events",
+    ]
+
+
+def test_task_mutation_succeeds_when_collaboration_writes_fail():
+    task = {
+        "id": "task-1",
+        "title": "Draft launch",
+        "assignee_id": ASSIGNEE_ID,
+        "status": "todo",
+    }
+    member_query = _query({"user_id": ASSIGNEE_ID})
+    task_query = _query([task])
+    db = Mock()
+    db.table.side_effect = [member_query, task_query]
+    service_query = _query([])
+    service_query.execute.side_effect = RuntimeError("supporting table unavailable")
+    service = Mock()
+    service.table.return_value = service_query
+
+    with patch("app.routers.tasks.get_service_client", return_value=service):
+        result = create_task(
+            TaskCreate(title="Draft launch", assignee_id=ASSIGNEE_ID),
+            _context(db),
+        )
+
+    assert result == task
+
+
+def test_update_task_can_clear_assignee():
+    current = {"id": "task-1", "title": "Draft launch", "assignee_id": ASSIGNEE_ID}
+    updated = {**current, "assignee_id": None, "status": "todo"}
+    get_query = _query(current)
+    update_query = _query([updated])
+    db = Mock()
+    db.table.side_effect = [get_query, update_query]
+    service = Mock()
+    service.table.return_value = _query([{}])
+
+    with patch("app.routers.tasks.get_service_client", return_value=service):
+        result = update_task("task-1", TaskUpdate(assignee_id=None), _context(db))
+
+    assert result["assignee_id"] is None
+    assert update_query.update.call_args.args[0]["assignee_id"] is None
+    assert [call.args[0] for call in service.table.call_args_list] == ["workspace_activity_events"]

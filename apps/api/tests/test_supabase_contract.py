@@ -55,3 +55,17 @@ def test_invitation_acceptance_is_recipient_scoped_and_atomic():
     assert "set accepted_at = now()" in sql
     assert "grant execute on function public.accept_workspace_invitation(uuid) to authenticated" in sql
     assert "on conflict on constraint workspace_members_workspace_id_user_id_key" in sql
+
+
+def test_collaboration_tables_are_tenant_scoped_and_activity_is_server_owned():
+    sql = migration("0011_collaboration.sql").lower()
+
+    assert "create table public.comments" in sql
+    assert "create table public.workspace_activity_events" in sql
+    assert "private.is_workspace_member(workspace_id)" in sql
+    assert "private.is_workspace_writer(workspace_id)" in sql
+    assert "author_id = auth.uid()" in sql
+    assert "comments_delete_author_or_admin" in sql
+    assert "revoke insert, update, delete on public.workspace_activity_events from anon, authenticated" in sql
+    assert "private.validate_collaboration_target" in sql
+    assert "profiles_select_shared_workspace" in sql
