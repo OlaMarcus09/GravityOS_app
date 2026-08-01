@@ -40,5 +40,18 @@ export function useTaskMutations() {
     onSuccess: invalidate,
   });
 
-  return { create, update, remove };
+  const submitApproval = useMutation({
+    mutationFn: (id: string) => tasksApi.submitApproval(ws!, id),
+    onSuccess: invalidate,
+  });
+  const approve = useMutation({
+    mutationFn: ({ id, note }: { id: string; note?: string }) => tasksApi.approve(ws!, id, note),
+    onSuccess: invalidate,
+  });
+  const reject = useMutation({
+    mutationFn: ({ id, note }: { id: string; note?: string }) => tasksApi.reject(ws!, id, note),
+    onSuccess: invalidate,
+  });
+
+  return { create, update, remove, submitApproval, approve, reject };
 }

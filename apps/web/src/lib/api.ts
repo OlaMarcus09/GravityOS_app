@@ -273,6 +273,11 @@ export type Task = {
   assignee_id: string | null;
   created_by: string | null;
   completed_at: string | null;
+  approval_status: "not_required" | "pending" | "approved" | "rejected";
+  approval_submitted_by: string | null;
+  approval_reviewed_by: string | null;
+  approval_reviewed_at: string | null;
+  approval_note: string | null;
 };
 
 export type TaskInput = {
@@ -296,6 +301,12 @@ export const tasksApi = {
     apiFetch<Task>(`/tasks/${id}`, { method: "PATCH", body, workspaceId: ws }),
   remove: (ws: string, id: string) =>
     apiFetch<void>(`/tasks/${id}`, { method: "DELETE", workspaceId: ws }),
+  submitApproval: (ws: string, id: string) =>
+    apiFetch<Task>(`/tasks/${id}/submit-approval`, { method: "POST", workspaceId: ws }),
+  approve: (ws: string, id: string, note?: string) =>
+    apiFetch<Task>(`/tasks/${id}/approve${note ? `?note=${encodeURIComponent(note)}` : ""}`, { method: "POST", workspaceId: ws }),
+  reject: (ws: string, id: string, note?: string) =>
+    apiFetch<Task>(`/tasks/${id}/reject${note ? `?note=${encodeURIComponent(note)}` : ""}`, { method: "POST", workspaceId: ws }),
 };
 // --- Projects --------------------------------------------------------------
 

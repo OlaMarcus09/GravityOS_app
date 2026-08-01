@@ -40,3 +40,8 @@ class TaskOut(BaseModel):
     assignee_id: Optional[UUID]
     created_by: Optional[UUID]
     completed_at: Optional[datetime]
+    approval_status: str = "not_required"
+    approval_submitted_by: Optional[UUID] = None
+    approval_reviewed_by: Optional[UUID] = None
+    approval_reviewed_at: Optional[datetime] = None
+    approval_note: Optional[str] = None

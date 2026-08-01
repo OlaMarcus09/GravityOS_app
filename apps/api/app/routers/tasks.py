@@ -1,6 +1,7 @@
 """Tasks routes (ARCHITECTURE.md section 3)."""
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -165,3 +166,84 @@ def update_task(task_id: str, body: TaskUpdate, ctx: WorkspaceContext = Depends(
 def delete_task(task_id: str, ctx: WorkspaceContext = Depends(require_writer)) -> None:
     _get_or_404(ctx, task_id)
     ctx.db.table("tasks").delete().eq("id", task_id).eq("workspace_id", ctx.workspace_id).execute()
+
+
+def _require_reviewer(ctx: WorkspaceContext) -> None:
+    if ctx.role not in ("owner", "admin"):
+        raise HTTPException(
+            status_code=403,
+            detail={"error": {"code": "reviewer_required", "message": "Only owners and admins can review tasks"}},
+        )
+
+
+@router.post("/{task_id}/submit-approval")
+def submit_task_for_approval(
+    task_id: str, ctx: WorkspaceContext = Depends(require_writer)
+) -> dict:
+    task = _get_or_404(ctx, task_id)
+    if ctx.plan != "team":
+        raise HTTPException(
+            status_code=403,
+            detail={"error": {"code": "plan_required", "message": "Approval workflows require the Team plan"}},
+        )
+    if task.get("approval_status") == "pending":
+        return task
+    result = (
+        ctx.db.table("tasks")
+        .update({
+            "approval_status": "pending",
+            "approval_submitted_by": ctx.auth.user_id,
+            "approval_reviewed_by": None,
+            "approval_reviewed_at": None,
+            "approval_note": None,
+        })
+        .eq("id", task_id)
+        .eq("workspace_id", ctx.workspace_id)
+        .execute()
+    )
+    updated = result.data[0]
+    _record_activity(ctx, updated, "task_submitted_for_approval")
+    return updated
+
+
+def _review_task(task_id: str, decision: str, note: Optional[str], ctx: WorkspaceContext) -> dict:
+    _require_reviewer(ctx)
+    task = _get_or_404(ctx, task_id)
+    if task.get("approval_status") != "pending":
+        raise HTTPException(
+            status_code=409,
+            detail={"error": {"code": "approval_not_pending", "message": "Task is not awaiting approval"}},
+        )
+    result = (
+        ctx.db.table("tasks")
+        .update({
+            "approval_status": decision,
+            "approval_reviewed_by": ctx.auth.user_id,
+            "approval_reviewed_at": datetime.now(timezone.utc).isoformat(),
+            "approval_note": note,
+        })
+        .eq("id", task_id)
+        .eq("workspace_id", ctx.workspace_id)
+        .execute()
+    )
+    updated = result.data[0]
+    _record_activity(ctx, updated, f"task_{decision}")
+    return updated
+
+
+@router.post("/{task_id}/approve")
+def approve_task(
+    task_id: str,
+    note: Optional[str] = Query(None, max_length=1000),
+    ctx: WorkspaceContext = Depends(get_workspace_context),
+) -> dict:
+    return _review_task(task_id, "approved", note, ctx)
+
+
+@router.post("/{task_id}/reject")
+def reject_task(
+    task_id: str,
+    note: Optional[str] = Query(None, max_length=1000),
+    ctx: WorkspaceContext = Depends(get_workspace_context),
+) -> dict:
+    return _review_task(task_id, "rejected", note, ctx)

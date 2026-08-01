@@ -27,9 +27,9 @@ const STATUSES: TaskStatus[] = ["todo", "in_progress", "blocked", "done"];
 const PRIORITIES = ["low", "medium", "high"] as const;
 
 export default function TasksPage() {
-  const { isReadOnly, workspaceId } = useWorkspace();
+  const { isReadOnly, workspaceId, role, plan } = useWorkspace();
   const { data, isLoading, error } = useTasks();
-  const { create, update, remove } = useTaskMutations();
+  const { create, update, remove, submitApproval, approve, reject } = useTaskMutations();
 
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
@@ -113,6 +113,18 @@ export default function TasksPage() {
               </div>
               <Badge tone={toneFor(t.priority)}>{t.priority}</Badge>
               <Badge tone={toneFor(t.status)}>{t.status.replace("_", " ")}</Badge>
+              {plan === "team" && <Badge>{t.approval_status.replace("_", " ")}</Badge>}
+              {plan === "team" && !isReadOnly && t.approval_status !== "pending" && (
+                <Button size="sm" variant="ghost" onClick={() => submitApproval.mutate(t.id)}>
+                  Submit
+                </Button>
+              )}
+              {plan === "team" && t.approval_status === "pending" && (role === "owner" || role === "admin") && (
+                <div style={{ display: "flex", gap: "0.35rem" }}>
+                  <Button size="sm" onClick={() => approve.mutate({ id: t.id })}>Approve</Button>
+                  <Button size="sm" variant="danger" onClick={() => reject.mutate({ id: t.id })}>Reject</Button>
+                </div>
+              )}
               <Button size="sm" variant="ghost" onClick={() => setCommenting(t)}>
                 Comments
               </Button>
