@@ -28,9 +28,7 @@ class Settings(BaseSettings):
     # Stripe (placeholder until keys are configured)
     stripe_secret_key: str = Field(default="", alias="STRIPE_SECRET_KEY")
     stripe_webhook_secret: str = Field(default="", alias="STRIPE_WEBHOOK_SECRET")
-    super_admin_emails: str = Field(
-        default="olawalemarcus92@gmail.com", alias="SUPER_ADMIN_EMAILS"
-    )
+    super_admin_emails: str = Field(default="", alias="SUPER_ADMIN_EMAILS")
     web_app_url: str = Field(default="http://localhost:3000", alias="WEB_APP_URL")
 
     environment: str = Field(default="development", alias="ENVIRONMENT")

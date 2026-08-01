@@ -546,10 +546,92 @@ def admin_set_plan(
             },
         )
     svc = get_service_client()
-    res = svc.table("workspaces").update({"plan": plan}).eq("id", workspace_id).execute()
-    if not res.data:
+    existing = svc.table("workspaces").select("id").eq("id", workspace_id).maybe_single().execute()
+    if not existing.data:
         raise HTTPException(
             status_code=404,
             detail={"error": {"code": "not_found", "message": "workspace not found"}},
         )
-    return res.data[0]
+    res = svc.rpc(
+        "admin_set_workspace_plan",
+        {
+            "p_workspace_id": workspace_id,
+            "p_new_plan": plan,
+            "p_actor_id": auth.user_id,
+            "p_actor_email": auth.email,
+        },
+    ).execute()
+    return res.data[0] if isinstance(res.data, list) else res.data
+
+
+@router.get("/admin/plan-audit")
+def admin_plan_audit(
+    auth: AuthContext = Depends(_require_super_admin),
+    limit: int = Query(50, ge=1, le=200),
+) -> list[dict]:
+    """Return the newest immutable manual plan-change events."""
+    res = (
+        get_service_client()
+        .table("admin_plan_audit_events")
+        .select("*, workspaces(name)")
+        .order("created_at", desc=True)
+        .limit(limit)
+        .execute()
+    )
+    return res.data or []
+
+
+@router.get("/admin/users")
+def admin_list_users(
+    auth: AuthContext = Depends(_require_super_admin),
+    email: Optional[str] = Query(None),
+) -> list[dict]:
+    """List Auth users for support and account-status administration."""
+    users = get_service_client().auth.admin.list_users()
+    needle = email.strip().lower() if email else ""
+    result = []
+    for user in users:
+        user_email = (user.email or "").lower()
+        if needle and needle not in user_email:
+            continue
+        result.append({
+            "id": user.id,
+            "email": user.email,
+            "created_at": user.created_at,
+            "last_sign_in_at": user.last_sign_in_at,
+            "banned_until": user.banned_until,
+        })
+    return result
+
+
+@router.patch("/admin/users/{user_id}/status")
+def admin_set_user_status(
+    user_id: str,
+    action: str = Query(...),
+    auth: AuthContext = Depends(_require_super_admin),
+) -> dict:
+    """Suspend or reactivate an Auth account and record the support action."""
+    if action not in ("suspend", "reactivate"):
+        raise HTTPException(status_code=400, detail={"error": {"code": "invalid_action", "message": "action must be suspend or reactivate"}})
+    if user_id == auth.user_id:
+        raise HTTPException(status_code=409, detail={"error": {"code": "self_action_forbidden", "message": "You cannot suspend your own account"}})
+    svc = get_service_client()
+    user = svc.auth.admin.get_user_by_id(user_id).user
+    if not user:
+        raise HTTPException(status_code=404, detail={"error": {"code": "not_found", "message": "user not found"}})
+    attributes = {"ban_duration": "none" if action == "reactivate" else "876000h"}
+    updated = svc.auth.admin.update_user_by_id(user_id, attributes).user
+    svc.table("admin_account_audit_events").insert({
+        "user_id": user_id,
+        "user_email": user.email or "",
+        "actor_id": auth.user_id,
+        "actor_email": auth.email or "",
+        "action": action,
+    }).execute()
+    return {
+        "id": updated.id,
+        "email": updated.email,
+        "created_at": updated.created_at,
+        "last_sign_in_at": updated.last_sign_in_at,
+        "banned_until": updated.banned_until,
+    }

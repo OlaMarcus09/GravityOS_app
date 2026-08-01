@@ -31,6 +31,22 @@ from app.routers import (
 API_PREFIX = "/api/v1"
 
 
+def _normalize_error(detail: object) -> dict[str, object]:
+    """Convert FastAPI and application exceptions to the public error contract."""
+    if isinstance(detail, dict) and isinstance(detail.get("error"), dict):
+        raw_error = detail["error"]
+        code = raw_error.get("code")
+        message = raw_error.get("message")
+        return {
+            "code": code if isinstance(code, str) and code else "http_error",
+            "message": message if isinstance(message, str) and message else "Request failed",
+            "details": raw_error.get("details"),
+        }
+    if isinstance(detail, str):
+        return {"code": "http_error", "message": detail, "details": None}
+    return {"code": "http_error", "message": "Request failed", "details": detail}
+
+
 def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(title="Gravity OS API", version="0.1.0")
@@ -38,16 +54,9 @@ def create_app() -> FastAPI:
     @app.exception_handler(HTTPException)
     async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
         """Expose the documented error shape consistently to the web client."""
-        detail = exc.detail
-        if isinstance(detail, dict) and isinstance(detail.get("error"), dict):
-            error = detail["error"]
-        elif isinstance(detail, str):
-            error = {"code": "http_error", "message": detail, "details": None}
-        else:
-            error = {"code": "http_error", "message": "Request failed", "details": detail}
         return JSONResponse(
             status_code=exc.status_code,
-            content={"error": error},
+            content={"error": _normalize_error(exc.detail)},
             headers=exc.headers,
         )
 
