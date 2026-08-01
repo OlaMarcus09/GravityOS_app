@@ -47,6 +47,7 @@ Phase 1 stabilization is locally complete. Migration
 The admin area now includes plan history, Auth user search, and audited account
 suspension/reactivation. Before deployment, apply migration `0015` and set the
 Render API environment variable `SUPER_ADMIN_EMAILS` to the verified platform
-admin email. Then redeploy the API and web app. The next product roadmap item is
-Stripe billing, followed by production Auth invitation-mail verification before
-approval workflows.
+admin email, then redeploy the API and web app. Billing remains deferred while
+user testing continues. The next release task is to apply migration
+`0016_task_approvals.sql`, redeploy, and live-test task submission/review with
+Team and viewer accounts.

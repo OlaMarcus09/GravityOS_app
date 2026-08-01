@@ -124,3 +124,11 @@ def test_admin_plan_changes_are_atomic_and_immutable():
     assert "to service_role" in sql
     assert "create table if not exists public.admin_account_audit_events" in sql
     assert "admin_account_audit_immutable" in sql
+
+
+def test_task_approval_migration_adds_review_state():
+    sql = migration("0016_task_approvals.sql").lower()
+    assert "alter table public.tasks" in sql
+    for column in ("approval_status", "approval_submitted_by", "approval_reviewed_by", "approval_reviewed_at", "approval_note"):
+        assert column in sql
+    assert "create index if not exists idx_tasks_approval" in sql

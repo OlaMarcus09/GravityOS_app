@@ -26,7 +26,7 @@ across a Next.js frontend, FastAPI backend, and Supabase database:
   production deployment verification, error-contract consistency, automated
   testing, and milestone-driven dashboard visualization.
 - **Planned:** live Stripe subscriptions, live AI Manager generation, email-based
-  invitations, offline access, marketplace features, approval workflows, and the
+  invitations, offline access, marketplace features, and the
   organization dashboard.
 
 ### Architectural decisions
@@ -553,6 +553,10 @@ These items describe the current engineering boundary, not completed behavior:
 - Implement Stripe checkout, portal, webhooks, and plan synchronization.
 - Verify Auth invitation email delivery and the invite browser journey in production.
 - Add Team-specific organization and approval workflows.
+
+Task approval workflow foundations are implemented for Team workspaces:
+writers can submit tasks, and owners/admins can approve or reject them with
+review metadata. Apply migration `0016_task_approvals.sql` before deployment.
 
 ### Phase 3 - Product intelligence and expansion
 

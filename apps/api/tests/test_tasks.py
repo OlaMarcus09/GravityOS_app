@@ -8,7 +8,13 @@ from fastapi import HTTPException
 
 from app.core.auth import AuthContext
 from app.core.deps import WorkspaceContext
-from app.routers.tasks import create_task, update_task
+from app.routers.tasks import (
+    approve_task,
+    create_task,
+    reject_task,
+    submit_task_for_approval,
+    update_task,
+)
 from app.schemas.tasks import TaskCreate, TaskUpdate
 
 ASSIGNEE_ID = "00000000-0000-0000-0000-000000000002"
@@ -158,3 +164,52 @@ def test_update_task_can_clear_assignee():
     assert result["assignee_id"] is None
     assert update_query.update.call_args.args[0]["assignee_id"] is None
     assert [call.args[0] for call in service.table.call_args_list] == ["workspace_activity_events"]
+
+
+def test_team_member_can_submit_task_for_approval():
+    current = {"id": "task-1", "title": "Draft launch", "approval_status": "not_required"}
+    updated = {**current, "approval_status": "pending", "approval_submitted_by": "user-1"}
+    get_query = _query(current)
+    update_query = _query([updated])
+    db = Mock()
+    db.table.side_effect = [get_query, update_query]
+    service = Mock()
+    service.table.return_value = _query([{}])
+
+    with patch("app.routers.tasks.get_service_client", return_value=service):
+        result = submit_task_for_approval("task-1", _context(db))
+
+    assert result == updated
+    assert update_query.update.call_args.args[0]["approval_status"] == "pending"
+
+
+def test_only_admins_can_approve_pending_task():
+    current = {"id": "task-1", "title": "Draft launch", "approval_status": "pending"}
+    updated = {**current, "approval_status": "approved", "approval_reviewed_by": "user-1"}
+    get_query = _query(current)
+    update_query = _query([updated])
+    db = Mock()
+    db.table.side_effect = [get_query, update_query]
+    ctx = _context(db)
+    ctx.role = "admin"
+    service = Mock()
+    service.table.return_value = _query([{}])
+
+    with patch("app.routers.tasks.get_service_client", return_value=service):
+        result = approve_task("task-1", None, ctx)
+
+    assert result == updated
+    assert update_query.update.call_args.args[0]["approval_status"] == "approved"
+
+
+def test_reviewer_cannot_decide_on_non_pending_task():
+    db = Mock()
+    db.table.return_value = _query({"id": "task-1", "approval_status": "approved"})
+    ctx = _context(db)
+    ctx.role = "owner"
+
+    with pytest.raises(HTTPException) as exc_info:
+        reject_task("task-1", "Needs changes", ctx)
+
+    assert exc_info.value.status_code == 409
+    assert exc_info.value.detail["error"]["code"] == "approval_not_pending"
