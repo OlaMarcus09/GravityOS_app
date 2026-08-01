@@ -315,6 +315,8 @@ def list_workspace_invitations(
 @router.post("/{workspace_id}/invitations", status_code=status.HTTP_201_CREATED)
 def create_invitation(body: MemberInvite, ctx: WorkspaceContext = Depends(require_writer)) -> dict:
     _require_team_admin(ctx)
+    if body.role == "admin" and ctx.role != "owner":
+        raise HTTPException(status_code=403, detail={"error": {"code": "owner_required", "message": "Only the workspace owner can invite administrators"}})
     check_rate_limit(f"invite:create:{ctx.workspace_id}:{ctx.auth.user_id}", limit=10)
     if body.email == (ctx.auth.email or "").strip().lower():
         raise HTTPException(

@@ -1,53 +1,75 @@
-# Next Session Handoff
+# Next session handoff
 
-Last updated: 2026-08-01
+Last updated: 2026-08-02
 
 ## Repository
 
 - GitHub: `OlaMarcus09/GravityOS_app`
-- Branch: `master`
-- Latest pushed commit: `a7cdddf fix: make tenant guard migration idempotent`
-- Use `/Users/Imarcuseth/Desktop/GravityOS` as the local working directory.
+- Active local branch: `master`
 - Push product work to the `app` remote, not `origin`.
 - Do not add co-author metadata to commits.
+- The cleaned history is on both GitHub `main` and `master`.
+- Current local hardening changes are uncommitted.
 
-## Completed
+## Product direction
 
-- Workspace invitation lifecycle and direct invite acceptance.
-- Responsive Team and invitation interfaces.
-- Persistent notification center and notification page.
-- Project/task comments, mentions, task assignments, and activity feed.
-- Owner and administrator membership protections.
-- Cross-workspace reference validation and database guards.
-- JWT algorithm allowlist, mutation throttling, profile privacy hardening,
-  notification cleanup, and Gravity Score writer/cooldown protection.
+Billing and mobile apps are deferred while early users test the product.
+The current pitch target is artist managers, label owners, and creative teams.
+The team product story is shared workspaces, role-based access, assignments,
+comments, approval control, notifications, and an accountable activity history.
 
-## Supabase Migrations
+## Completed team capabilities
+
+- Workspace invitation lifecycle, acceptance, resend, expiry, and revoke.
+- Team members with owner, admin, member, and viewer roles.
+- Owner/admin membership protections and viewer read-only enforcement.
+- Projects, tasks, assignments, comments, mentions, and activity feed.
+- Persistent notifications and invitation/assignment/mention alerts.
+- Task approval workflow for Team workspaces.
+- Immutable approval event history and server-side approval transitions.
+- Admin plan audit history, user search, suspension, and reactivation.
+- Cross-workspace reference validation and database tenancy guards.
+
+## Supabase migrations
 
 - `0010_notifications.sql`
 - `0011_collaboration.sql`
 - `0012_owner_membership_guards.sql`
 - `0013_tenant_reference_integrity.sql`
 - `0014_security_hardening.sql`
+- `0015_admin_plan_audit.sql`
+- `0016_task_approvals.sql`
+- `0017_team_workflow_integrity.sql`
 
-`0013` was updated to be idempotent after an existing-trigger error. Run the
-entire latest version again if the earlier attempt stopped partway through.
+Migrations `0015`, `0016`, and `0017` have been applied in the active Supabase
+project. `0017` protects approval columns from direct PostgREST writes, adds
+atomic approval RPCs, records approval events, aligns membership RLS with the
+API hierarchy, restricts admin invitations to owners, and validates notification
+recipients against workspace membership.
 
 ## Validation
 
-- API suite: 57 tests passed.
-- Frontend source typecheck passed.
-- Frontend production build passed (`next build`).
-- The remaining changes are still uncommitted in the working tree.
+- API suite: 72 tests passed.
+- Frontend typecheck passed.
+- Frontend production build passed.
+- `git diff --check` passed.
 
-## Next Work
+## Deployment configuration
 
-Phase 1 stabilization is locally complete. Migration
-`0015_admin_plan_audit.sql` adds immutable plan and account-action audit tables.
-The admin area now includes plan history, Auth user search, and audited account
-suspension/reactivation. Before deployment, apply migration `0015` and set the
-Render API environment variable `SUPER_ADMIN_EMAILS` to the verified platform
-admin email, then redeploy the API and web app. Billing remains deferred while
-user testing continues. The next release task is to apply migration
-`0016_task_approvals.sql`, redeploy, and live-test task submission/review with
-Team and viewer accounts.
+- Render API has `SUPER_ADMIN_EMAILS` configured with the verified platform admin email.
+- Redeploy API and web after committing the current hardening batch.
+- Confirm the deployed web build includes the Admin account support and Plan audit sections.
+
+## Next work
+
+1. Commit and push the current migration `0017` hardening batch.
+2. Live-test Team approvals with member, owner/admin, and viewer accounts.
+3. Add approval notes, reviewer/date context, loading states, and action errors to the task UI.
+4. Add a manager-facing "Needs review" queue.
+5. Improve Team member identity display with verified email addresses.
+6. Add activity filtering by project, member, and event type.
+7. Run a two-workspace isolation test and a complete owner/admin/member/viewer permission matrix.
+8. Prepare a guided demo workspace and pitch flow for artist managers and label owners.
+
+Do not start Stripe billing or mobile packaging until the user-testing cycle
+produces enough feedback to justify those investments.

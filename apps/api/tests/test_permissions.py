@@ -313,6 +313,14 @@ def test_owner_can_promote_member_to_admin():
     notify.assert_called_once()
 
 
+def test_admin_cannot_invite_another_admin():
+    with patch("app.routers.workspaces.get_service_client"):
+        with pytest.raises(HTTPException) as exc_info:
+            create_invitation(MemberInvite(email="new@example.com", role="admin"), workspace_context(role="admin", plan="team"))
+    assert exc_info.value.status_code == 403
+    assert exc_info.value.detail["error"]["code"] == "owner_required"
+
+
 def test_admin_can_remove_regular_member():
     deleted = {"id": "membership-2", "user_id": "user-2", "role": "member"}
     service, mutation = member_service(deleted, [deleted])

@@ -170,9 +170,11 @@ def test_team_member_can_submit_task_for_approval():
     current = {"id": "task-1", "title": "Draft launch", "approval_status": "not_required"}
     updated = {**current, "approval_status": "pending", "approval_submitted_by": "user-1"}
     get_query = _query(current)
-    update_query = _query([updated])
     db = Mock()
-    db.table.side_effect = [get_query, update_query]
+    db.table.side_effect = [get_query]
+    rpc = Mock()
+    rpc.execute.return_value = Mock(data=updated)
+    db.rpc.return_value = rpc
     service = Mock()
     service.table.return_value = _query([{}])
 
@@ -180,16 +182,18 @@ def test_team_member_can_submit_task_for_approval():
         result = submit_task_for_approval("task-1", _context(db))
 
     assert result == updated
-    assert update_query.update.call_args.args[0]["approval_status"] == "pending"
+    db.rpc.assert_called_once_with("submit_task_for_approval", {"p_task_id": "task-1"})
 
 
 def test_only_admins_can_approve_pending_task():
     current = {"id": "task-1", "title": "Draft launch", "approval_status": "pending"}
     updated = {**current, "approval_status": "approved", "approval_reviewed_by": "user-1"}
     get_query = _query(current)
-    update_query = _query([updated])
     db = Mock()
-    db.table.side_effect = [get_query, update_query]
+    db.table.side_effect = [get_query]
+    rpc = Mock()
+    rpc.execute.return_value = Mock(data=updated)
+    db.rpc.return_value = rpc
     ctx = _context(db)
     ctx.role = "admin"
     service = Mock()
@@ -199,12 +203,12 @@ def test_only_admins_can_approve_pending_task():
         result = approve_task("task-1", None, ctx)
 
     assert result == updated
-    assert update_query.update.call_args.args[0]["approval_status"] == "approved"
+    db.rpc.assert_called_once_with("review_task_approval", {"p_task_id": "task-1", "p_decision": "approved", "p_note": None})
 
 
 def test_reviewer_cannot_decide_on_non_pending_task():
     db = Mock()
-    db.table.return_value = _query({"id": "task-1", "approval_status": "approved"})
+    db.rpc.return_value.execute.side_effect = RuntimeError("task is not awaiting approval")
     ctx = _context(db)
     ctx.role = "owner"
 
@@ -212,4 +216,22 @@ def test_reviewer_cannot_decide_on_non_pending_task():
         reject_task("task-1", "Needs changes", ctx)
 
     assert exc_info.value.status_code == 409
-    assert exc_info.value.detail["error"]["code"] == "approval_not_pending"
+    assert exc_info.value.detail["error"]["code"] == "approval_review_failed"
+
+
+def test_approved_task_is_locked_against_edits():
+    db = Mock()
+    db.table.return_value = _query({"id": "task-1", "title": "Approved", "approval_status": "approved"})
+    with pytest.raises(HTTPException) as exc_info:
+        update_task("task-1", TaskUpdate(title="Changed after approval"), _context(db))
+    assert exc_info.value.status_code == 409
+    assert exc_info.value.detail["error"]["code"] == "approval_locked"
+
+
+def test_review_requires_team_plan():
+    ctx = _context(Mock())
+    ctx.role = "owner"
+    ctx.plan = "pro"
+    with pytest.raises(HTTPException) as exc_info:
+        approve_task("task-1", None, ctx)
+    assert exc_info.value.detail["error"]["code"] == "plan_required"

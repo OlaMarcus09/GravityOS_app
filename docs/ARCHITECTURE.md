@@ -556,7 +556,9 @@ These items describe the current engineering boundary, not completed behavior:
 
 Task approval workflow foundations are implemented for Team workspaces:
 writers can submit tasks, and owners/admins can approve or reject them with
-review metadata. Apply migration `0016_task_approvals.sql` before deployment.
+review metadata. Approval transitions are protected by server-side RPCs and an
+approval event history. Apply migrations `0016_task_approvals.sql` and
+`0017_team_workflow_integrity.sql` before deployment.
 
 ### Phase 3 - Product intelligence and expansion
 

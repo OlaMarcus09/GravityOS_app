@@ -132,3 +132,15 @@ def test_task_approval_migration_adds_review_state():
     for column in ("approval_status", "approval_submitted_by", "approval_reviewed_by", "approval_reviewed_at", "approval_note"):
         assert column in sql
     assert "create index if not exists idx_tasks_approval" in sql
+
+
+def test_task_approval_integrity_is_database_enforced():
+    sql = migration("0017_team_workflow_integrity.sql").lower()
+    assert "approval fields are server-controlled" in sql
+    assert "create or replace function public.submit_task_for_approval" in sql
+    assert "create or replace function public.review_task_approval" in sql
+    assert "submitter cannot review their own task" in sql
+    assert "task_approval_events" in sql
+    assert "drop policy if exists members_update_admin" in sql
+    assert "only the workspace owner can invite administrators" in sql
+    assert "notification recipient is not a workspace member" in sql

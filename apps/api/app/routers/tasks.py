@@ -71,10 +71,45 @@ def _record_activity(ctx: WorkspaceContext, task: dict, kind: str) -> None:
                 "project_id": task.get("project_id"),
                 "assignee_id": task.get("assignee_id"),
                 "status": task.get("status"),
+                "approval_status": task.get("approval_status"),
             },
         }).execute()
     except Exception:
         # Activity is supporting context and must not block task work.
+        return
+
+
+def _notify_approval(ctx: WorkspaceContext, task: dict, event: str) -> None:
+    try:
+        service = get_service_client()
+        if event == "submitted":
+            reviewers = service.table("workspace_members").select("user_id").eq(
+                "workspace_id", ctx.workspace_id
+            ).in_("role", ["owner", "admin"]).execute().data or []
+            recipient_ids = [row["user_id"] for row in reviewers if row["user_id"] != ctx.auth.user_id]
+            title = "Task awaiting approval"
+            message = f'"{task["title"]}" is ready for review.'
+            kind = "task_approval_requested"
+        else:
+            recipient = task.get("approval_submitted_by")
+            recipient_ids = [recipient] if recipient and recipient != ctx.auth.user_id else []
+            title = f"Task {event}"
+            message = f'"{task["title"]}" was {event}.'
+            kind = f"task_{event}"
+        if recipient_ids:
+            service.table("notifications").insert([
+                {
+                    "workspace_id": ctx.workspace_id,
+                    "recipient_id": recipient_id,
+                    "kind": kind,
+                    "title": title,
+                    "message": message,
+                    "action_url": "/tasks",
+                    "metadata": {"task_id": task["id"], "actor_id": ctx.auth.user_id},
+                }
+                for recipient_id in recipient_ids
+            ]).execute()
+    except Exception:
         return
 
 
@@ -140,6 +175,10 @@ def update_task(task_id: str, body: TaskUpdate, ctx: WorkspaceContext = Depends(
         updates["assignee_id"] = None
     if not updates:
         return current
+    if current.get("approval_status") == "pending":
+        raise HTTPException(status_code=409, detail={"error": {"code": "approval_pending", "message": "Resolve the pending review before editing this task"}})
+    if current.get("approval_status") == "approved":
+        raise HTTPException(status_code=409, detail={"error": {"code": "approval_locked", "message": "Approved tasks are locked until the approval is reset"}})
     if project_id := updates.get("project_id"):
         validate_project_reference(ctx, project_id)
     assignee_changed = (
@@ -188,46 +227,29 @@ def submit_task_for_approval(
         )
     if task.get("approval_status") == "pending":
         return task
-    result = (
-        ctx.db.table("tasks")
-        .update({
-            "approval_status": "pending",
-            "approval_submitted_by": ctx.auth.user_id,
-            "approval_reviewed_by": None,
-            "approval_reviewed_at": None,
-            "approval_note": None,
-        })
-        .eq("id", task_id)
-        .eq("workspace_id", ctx.workspace_id)
-        .execute()
-    )
-    updated = result.data[0]
+    try:
+        updated = ctx.db.rpc("submit_task_for_approval", {"p_task_id": task_id}).execute().data
+    except Exception as exc:
+        raise HTTPException(status_code=403, detail={"error": {"code": "approval_submit_failed", "message": str(exc)}}) from exc
+    if isinstance(updated, list): updated = updated[0] if updated else None
+    if not updated: raise HTTPException(status_code=404, detail={"error": {"code": "not_found", "message": "task not found"}})
     _record_activity(ctx, updated, "task_submitted_for_approval")
+    _notify_approval(ctx, updated, "submitted")
     return updated
 
 
 def _review_task(task_id: str, decision: str, note: Optional[str], ctx: WorkspaceContext) -> dict:
     _require_reviewer(ctx)
-    task = _get_or_404(ctx, task_id)
-    if task.get("approval_status") != "pending":
-        raise HTTPException(
-            status_code=409,
-            detail={"error": {"code": "approval_not_pending", "message": "Task is not awaiting approval"}},
-        )
-    result = (
-        ctx.db.table("tasks")
-        .update({
-            "approval_status": decision,
-            "approval_reviewed_by": ctx.auth.user_id,
-            "approval_reviewed_at": datetime.now(timezone.utc).isoformat(),
-            "approval_note": note,
-        })
-        .eq("id", task_id)
-        .eq("workspace_id", ctx.workspace_id)
-        .execute()
-    )
-    updated = result.data[0]
+    if ctx.plan != "team":
+        raise HTTPException(status_code=403, detail={"error": {"code": "plan_required", "message": "Approval workflows require the Team plan"}})
+    try:
+        updated = ctx.db.rpc("review_task_approval", {"p_task_id": task_id, "p_decision": decision, "p_note": note}).execute().data
+    except Exception as exc:
+        raise HTTPException(status_code=409, detail={"error": {"code": "approval_review_failed", "message": str(exc)}}) from exc
+    if isinstance(updated, list): updated = updated[0] if updated else None
+    if not updated: raise HTTPException(status_code=409, detail={"error": {"code": "approval_review_failed", "message": "Task review failed"}})
     _record_activity(ctx, updated, f"task_{decision}")
+    _notify_approval(ctx, updated, decision)
     return updated
 
 
