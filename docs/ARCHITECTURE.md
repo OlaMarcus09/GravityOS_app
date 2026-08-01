@@ -22,7 +22,7 @@ across a Next.js frontend, FastAPI backend, and Supabase database:
   release planning, catalogue uploads, budgets, marketing planning, dashboard
   aggregation, plan gating, Gravity Score computation, and provisional manual
   plan administration.
-- **Partial:** administration audit history and account controls, team management, billing UX,
+- **Partial:** administration support tooling, team management, billing UX,
   production deployment verification, error-contract consistency, automated
   testing, and milestone-driven dashboard visualization.
 - **Planned:** live Stripe subscriptions, live AI Manager generation, email-based
@@ -360,9 +360,11 @@ The intended application error shape is:
 }
 ```
 
-Current FastAPI `HTTPException` responses wrap custom details beneath a
-top-level `detail` property. The API and frontend error parser must be aligned
-before the error shape above can be considered enforced.
+FastAPI exception handlers normalize application, framework, and request
+validation errors to this shape. `details` is always present (and is `null`
+when there is no structured context). The frontend also accepts the legacy
+`detail.error` nesting during rolling deployments, while exposing the normalized
+code and details through `ApiError`.
 
 ## 6. Frontend Architecture
 
@@ -497,22 +499,26 @@ privileged operations such as Storage signing and super-admin administration.
 
 These items describe the current engineering boundary, not completed behavior:
 
-1. **Gravity Score persistence:** the compute endpoint inserts with a
-   user-scoped client, while current RLS only defines member read access for
-   `gravity_scores`. The write path must use an intentionally privileged service
-   operation or receive a safe insert policy.
-2. **Error response mismatch:** FastAPI and the frontend parser do not currently
-   agree on where custom error data is nested.
-3. **Admin audit model:** platform-admin emails are server-configured and the
-   frontend consumes an API capability, but plan changes are not yet written to
-   an immutable audit log and account suspension/support controls do not exist.
-4. **Limited automated tests:** the backend suite currently covers health,
-   unauthenticated rejection, and route registration only. There are no
-   integration tests for CRUD, RLS, roles, plan gates, uploads, dashboard
-   aggregation, or scoring, and no frontend test suite.
-5. **Frontend build health:** local typechecking currently fails inside generated
-   `.next` types due to a Next.js type-resolution issue. CI and clean-install
-   production builds must be made reliable.
+1. **Gravity Score persistence:** resolved. The compute endpoint reads all
+   inputs through the caller's RLS-scoped client and writes the resulting
+   `gravity_scores` snapshot through the server-only service-role client.
+   `gravity_scores` remains member-read-only under RLS, so callers cannot
+   forge or modify snapshots directly.
+2. **Error response mismatch:** resolved. FastAPI normalizes framework and
+   application errors, and the frontend parser supports both the normalized
+   contract and legacy `detail.error` responses during deployment rollouts.
+3. **Admin controls:** manual plan changes are written atomically to an
+   immutable audit table. The admin area also supports Auth user search and
+   audited suspension/reactivation. Broader support tooling remains planned.
+4. **Limited automated tests:** the backend now has focused coverage for
+   collaboration, task behavior, permissions, security hardening, tenant
+   references, catalogue contracts, and public error responses. Broader CRUD,
+   RLS, dashboard aggregation, and clean-database integration coverage remains.
+   There is still no frontend test suite.
+5. **Frontend build health:** source-only typechecking now passes through the
+   dedicated `apps/web/tsconfig.typecheck.json` project (generated `.next`
+   types are excluded). The production build still needs CI/clean-install
+   verification; local `next build` can stall during optimized compilation.
 6. **Catalogue lifecycle verification:** storage paths are collision-resistant
    and deletion removes the object before metadata, but the binary lifecycle still
    needs verification against the deployed Supabase bucket.
@@ -532,7 +538,8 @@ These items describe the current engineering boundary, not completed behavior:
 
 ### Phase 1 - Stabilize the MVP
 
-- Fix Gravity Score persistence and error-shape consistency.
+- Verify Gravity Score persistence in a deployed Supabase project and finish
+  error-shape consistency.
 - Move super-admin configuration out of source code.
 - Repair clean frontend typecheck/build behavior.
 - Add backend feature and permission tests plus a minimal frontend smoke suite.
@@ -540,9 +547,9 @@ These items describe the current engineering boundary, not completed behavior:
 
 ### Phase 2 - Complete monetization and teams
 
-- Extend the dedicated admin area with user search, account status controls, and
-  immutable audit history. Workspace search, plan management, summary metrics,
-  confirmation flows, and responsive loading/error states are implemented.
+- Extend the dedicated admin area with broader support controls. Workspace and
+  user search, plan management, account suspension/reactivation, summary
+  metrics, confirmation flows, and immutable plan audit history are implemented.
 - Implement Stripe checkout, portal, webhooks, and plan synchronization.
 - Verify Auth invitation email delivery and the invite browser journey in production.
 - Add Team-specific organization and approval workflows.

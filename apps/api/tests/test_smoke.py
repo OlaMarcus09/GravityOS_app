@@ -12,7 +12,7 @@ os.environ.setdefault("SUPABASE_JWT_SECRET", "test-secret")
 
 from fastapi.testclient import TestClient  # noqa: E402
 
-from app.main import app  # noqa: E402
+from app.main import _normalize_error, app  # noqa: E402
 
 client = TestClient(app)
 
@@ -91,4 +91,27 @@ def test_validation_errors_use_public_error_contract():
         app.dependency_overrides.clear()
 
     assert response.status_code == 422
-    assert response.json()["error"]["code"] == "validation_error"
+    error = response.json()["error"]
+    assert error["code"] == "validation_error"
+    assert error["message"] == "Request validation failed"
+    assert isinstance(error["details"], list)
+    assert error["details"][0]["loc"][-1] == "title"
+
+
+def test_application_errors_fill_every_contract_field():
+    assert _normalize_error(
+        {"error": {"code": "plan_required", "message": "Upgrade required"}}
+    ) == {
+        "code": "plan_required",
+        "message": "Upgrade required",
+        "details": None,
+    }
+
+
+def test_nonstandard_http_error_details_are_preserved_for_diagnostics():
+    details = [{"field": "name", "reason": "invalid"}]
+    assert _normalize_error(details) == {
+        "code": "http_error",
+        "message": "Request failed",
+        "details": details,
+    }

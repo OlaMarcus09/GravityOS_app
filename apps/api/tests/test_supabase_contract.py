@@ -109,3 +109,18 @@ def test_security_hardening_migration_contract():
     assert "drop policy if exists profiles_select_shared_workspace" in sql
     assert "sync_invitation_notification_recipient" in sql
     assert "recipient_email = null" in sql
+
+
+def test_admin_plan_changes_are_atomic_and_immutable():
+    sql = migration("0015_admin_plan_audit.sql").lower()
+
+    assert "create table if not exists public.admin_plan_audit_events" in sql
+    assert "before update or delete on public.admin_plan_audit_events" in sql
+    assert "admin audit events are immutable" in sql
+    assert "create or replace function public.admin_set_workspace_plan" in sql
+    assert "for update" in sql
+    assert "insert into public.admin_plan_audit_events" in sql
+    assert "grant execute on function public.admin_set_workspace_plan" in sql
+    assert "to service_role" in sql
+    assert "create table if not exists public.admin_account_audit_events" in sql
+    assert "admin_account_audit_immutable" in sql

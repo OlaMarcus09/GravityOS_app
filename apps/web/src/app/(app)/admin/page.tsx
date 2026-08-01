@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Badge, Button, Card, EmptyState, Input, Modal, PageHeader, Select, Spinner, StatTile } from "@/components/ui";
-import { adminApi, type AdminWorkspace } from "@/lib/api";
+import { adminApi, type AdminPlanAuditEvent, type AdminUser, type AdminWorkspace } from "@/lib/api";
 import { useMe } from "@/lib/queries/useMe";
 
 type Plan = "free" | "pro" | "team";
@@ -14,6 +14,9 @@ export default function AdminPage() {
   const router = useRouter();
   const { data: me, isLoading: meLoading } = useMe();
   const [workspaces, setWorkspaces] = useState<AdminWorkspace[]>([]);
+  const [auditEvents, setAuditEvents] = useState<AdminPlanAuditEvent[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [userSearch, setUserSearch] = useState("");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,12 +36,29 @@ export default function AdminPage() {
     }
   };
 
+  const loadAudit = async () => {
+    try {
+      setAuditEvents(await adminApi.planAudit());
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
+  const loadUsers = async (query?: string) => {
+    try { setUsers(await adminApi.users(query?.trim() || undefined)); }
+    catch (err) { setError((err as Error).message); }
+  };
+
   useEffect(() => {
     if (!meLoading && me && !me.capabilities.platform_admin) router.replace("/dashboard");
   }, [me, meLoading, router]);
 
   useEffect(() => {
-    if (me?.capabilities.platform_admin) void loadWorkspaces();
+    if (me?.capabilities.platform_admin) {
+      void loadWorkspaces();
+      void loadAudit();
+      void loadUsers();
+    }
   }, [me?.capabilities.platform_admin]);
 
   const metrics = useMemo(() => ({
@@ -54,6 +74,15 @@ export default function AdminPage() {
     void loadWorkspaces();
   };
 
+  const toggleUserStatus = async (user: AdminUser) => {
+    const action = user.banned_until ? "reactivate" : "suspend" as const;
+    try {
+      const updated = await adminApi.setUserStatus(user.id, action);
+      setUsers((current) => current.map((item) => item.id === updated.id ? updated : item));
+      setNotice(`${updated.email ?? "User"} ${action === "suspend" ? "suspended" : "reactivated"}.`);
+    } catch (err) { setError((err as Error).message); }
+  };
+
   const confirmPlanChange = async () => {
     if (!pendingPlan) return;
     setSaving(true);
@@ -64,6 +93,7 @@ export default function AdminPage() {
         workspace.id === updated.id ? { ...workspace, plan: updated.plan } : workspace
       )));
       setNotice(`${pendingPlan.workspace.name} is now on the ${pendingPlan.plan} plan.`);
+      await loadAudit();
       setPendingPlan(null);
     } catch (err) {
       setError((err as Error).message);
@@ -84,6 +114,14 @@ export default function AdminPage() {
         <Card><StatTile label="Pro + Team" value={metrics.paid} tone="accent" /></Card>
         <Card><StatTile label="Members" value={metrics.members} tone="success" /></Card>
       </div>
+
+      <Card style={{ marginTop: "1.25rem", padding: "1.25rem" }}>
+        <div className="admin-toolbar">
+          <div><span className="eyebrow">Account support</span><p style={{ color: "var(--muted)", margin: "0.35rem 0 0" }}>Search users and manage account access.</p></div>
+          <div className="admin-search"><Input aria-label="User email" value={userSearch} onChange={(event) => setUserSearch(event.target.value)} placeholder="user@example.com" /><Button onClick={() => void loadUsers(userSearch)}>Search</Button><Button variant="ghost" onClick={() => { setUserSearch(""); void loadUsers(); }}>Show all</Button></div>
+        </div>
+        <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Email</th><th>Created</th><th>Last sign-in</th><th>Status</th><th /></tr></thead><tbody>{users.map((user) => <tr key={user.id}><td>{user.email}</td><td>{new Date(user.created_at).toLocaleDateString()}</td><td>{user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleDateString() : "Never"}</td><td>{user.banned_until ? <Badge>Suspended</Badge> : <Badge>Active</Badge>}</td><td><Button variant="ghost" onClick={() => void toggleUserStatus(user)}>{user.banned_until ? "Reactivate" : "Suspend"}</Button></td></tr>)}</tbody></table></div>
+      </Card>
 
       <Card style={{ marginTop: "1.25rem", padding: "1.25rem" }}>
         <div className="admin-toolbar">
@@ -148,6 +186,34 @@ export default function AdminPage() {
                         <option value="team">Team</option>
                       </Select>
                     </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      <Card style={{ marginTop: "1.25rem", padding: "1.25rem" }}>
+        <span className="eyebrow">Plan audit history</span>
+        <p style={{ color: "var(--muted)", margin: "0.35rem 0 1rem" }}>
+          Immutable records of manual subscription changes made by platform administrators.
+        </p>
+        {auditEvents.length === 0 ? (
+          <EmptyState title="No plan changes recorded" hint="New manual plan changes will appear here." />
+        ) : (
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr><th>Workspace</th><th>Change</th><th>Administrator</th><th>Date</th></tr>
+              </thead>
+              <tbody>
+                {auditEvents.map((event) => (
+                  <tr key={event.id}>
+                    <td><strong>{event.workspaces?.name ?? event.workspace_id}</strong></td>
+                    <td>{event.previous_plan} → {event.new_plan}</td>
+                    <td>{event.actor_email}</td>
+                    <td>{new Date(event.created_at).toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>

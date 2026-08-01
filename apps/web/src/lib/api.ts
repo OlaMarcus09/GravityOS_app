@@ -8,12 +8,49 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export class ApiError extends Error {
   status: number;
-  code?: string;
-  constructor(status: number, message: string, code?: string) {
+  code: string;
+  details: unknown;
+  constructor(status: number, message: string, code = "http_error", details: unknown = null) {
     super(message);
+    this.name = "ApiError";
     this.status = status;
     this.code = code;
+    this.details = details;
   }
+}
+
+type ParsedApiError = {
+  message: string;
+  code: string;
+  details: unknown;
+};
+
+export function parseApiErrorPayload(payload: unknown, fallbackMessage: string): ParsedApiError {
+  if (!payload || typeof payload !== "object") {
+    return { message: fallbackMessage, code: "http_error", details: null };
+  }
+
+  const body = payload as Record<string, unknown>;
+  const legacyDetail = body.detail;
+  const legacyBody = legacyDetail && typeof legacyDetail === "object"
+    ? legacyDetail as Record<string, unknown>
+    : undefined;
+  const candidate = body.error ?? legacyBody?.error;
+
+  if (candidate && typeof candidate === "object") {
+    const error = candidate as Record<string, unknown>;
+    return {
+      message: typeof error.message === "string" ? error.message : fallbackMessage,
+      code: typeof error.code === "string" ? error.code : "http_error",
+      details: error.details ?? null,
+    };
+  }
+
+  return {
+    message: typeof legacyDetail === "string" ? legacyDetail : fallbackMessage,
+    code: "http_error",
+    details: null,
+  };
 }
 
 type ApiOptions = {
@@ -44,18 +81,19 @@ export async function apiFetch<T>(path: string, opts: ApiOptions = {}): Promise<
   });
 
   if (!res.ok) {
-    let message = res.statusText;
-    let code: string | undefined;
+    let parsed: ParsedApiError = {
+      message: res.statusText || "Request failed",
+      code: "http_error",
+      details: null,
+    };
     try {
       const payload = await res.json();
-      // Support both the normalized contract and older API deployments.
-      const error = payload?.error ?? payload?.detail?.error;
-      message = error?.message ?? payload?.detail ?? message;
-      code = error?.code;
+      // Keep legacy support while older API deployments are being replaced.
+      parsed = parseApiErrorPayload(payload, parsed.message);
     } catch {
       // non-JSON error body
     }
-    throw new ApiError(res.status, message, code);
+    throw new ApiError(res.status, parsed.message, parsed.code, parsed.details);
   }
 
   if (res.status === 204) {
@@ -652,6 +690,25 @@ export type AdminWorkspace = {
   workspace_members?: Array<{ user_id: string; role: string }>;
 };
 
+export type AdminPlanAuditEvent = {
+  id: string;
+  workspace_id: string;
+  actor_id: string;
+  actor_email: string;
+  previous_plan: string;
+  new_plan: string;
+  created_at: string;
+  workspaces?: { name: string } | null;
+};
+
+export type AdminUser = {
+  id: string;
+  email: string | null;
+  created_at: string;
+  last_sign_in_at: string | null;
+  banned_until: string | null;
+};
+
 export const adminApi = {
   listAll: (email?: string) => {
     const qs = email ? `?email=${encodeURIComponent(email)}` : "";
@@ -659,4 +716,9 @@ export const adminApi = {
   },
   setPlan: (workspaceId: string, plan: string) =>
     apiFetch<AdminWorkspace>(`/workspaces/admin/workspaces/${workspaceId}/plan?plan=${plan}`, { method: "PATCH" }),
+  planAudit: (limit = 50) =>
+    apiFetch<AdminPlanAuditEvent[]>(`/workspaces/admin/plan-audit?limit=${limit}`),
+  users: (email?: string) => apiFetch<AdminUser[]>(`/workspaces/admin/users${email ? `?email=${encodeURIComponent(email)}` : ""}`),
+  setUserStatus: (userId: string, action: "suspend" | "reactivate") =>
+    apiFetch<AdminUser>(`/workspaces/admin/users/${userId}/status?action=${action}`, { method: "PATCH" }),
 };

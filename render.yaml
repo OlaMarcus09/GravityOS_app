@@ -32,4 +32,4 @@ services:
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
       - key: SUPER_ADMIN_EMAILS
-        value: olawalemarcus92@gmail.com
+        sync: false
