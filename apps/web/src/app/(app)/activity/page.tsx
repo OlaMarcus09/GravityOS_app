@@ -19,6 +19,7 @@ const EVENT_TYPES: { value: ActivityEventType; label: string }[] = [
   { value: "task_updated", label: "Task updated" },
   { value: "task_submitted_for_approval", label: "Task submitted for approval" },
   { value: "task_approved", label: "Task approved" },
+  { value: "task_completed", label: "Task completed" },
   { value: "task_rejected", label: "Task rejected" },
 ];
 

@@ -44,6 +44,7 @@ comments, approval control, notifications, and an accountable activity history.
 - `0015_admin_plan_audit.sql`
 - `0016_task_approvals.sql`
 - `0017_team_workflow_integrity.sql`
+- `0018_task_approval_completion.sql`
 
 Migrations `0015`, `0016`, and `0017` have been applied in the active Supabase
 project. `0017` protects approval columns from direct PostgREST writes, adds
@@ -51,9 +52,13 @@ atomic approval RPCs, records approval events, aligns membership RLS with the
 API hierarchy, restricts admin invitations to owners, and validates notification
 recipients against workspace membership.
 
+Migration `0018` was applied to the active Supabase project on 2026-08-02. It
+makes approval atomically complete the task, reopens rejected tasks for
+corrections, and protects reviewed-task history from deletion.
+
 ## Validation
 
-- API suite: 97 tests passed.
+- API suite: 103 tests passed.
 - Frontend typecheck passed.
 - Frontend production build passed.
 - `git diff --check` passed.
@@ -77,13 +82,13 @@ recipients against workspace membership.
 
 Start the next session here:
 
-1. Run the API health, production CORS, invitation-link, and browser network
-   checks against the live Render/Vercel deployments.
-2. Live-test Team approvals with separate member, owner/admin, and viewer accounts,
-   including rejection notes, resubmission, self-review prevention, and task locks.
-3. Run a live two-workspace isolation check using dedicated test accounts.
-4. Confirm the platform-admin support and plan-audit sections in production.
-5. Seed and rehearse the guided demo workspace for artist managers and label owners.
+1. Confirm Render and Vercel deploy the new application commit, then run API health,
+   production CORS, invitation-link, and browser network checks.
+2. Live-test that approval marks a task `Approved · Completed`, while rejection
+   reopens it for editing/resubmission and retains the decision history.
+3. Run a live two-workspace isolation check and confirm platform-admin support and
+   plan-audit sections in production.
+4. Seed and rehearse the guided demo workspace for artist managers and label owners.
 
 The reusable seed, narrative, role setup, approval walkthrough, fallbacks, and
 reset checklist are in [docs/DEMO.md](DEMO.md).

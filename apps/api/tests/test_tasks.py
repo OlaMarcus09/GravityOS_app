@@ -10,6 +10,7 @@ from app.core.auth import AuthContext
 from app.core.deps import WorkspaceContext
 from app.routers.tasks import (
     approve_task,
+    delete_task,
     create_task,
     reject_task,
     submit_task_for_approval,
@@ -187,7 +188,13 @@ def test_team_member_can_submit_task_for_approval():
 
 def test_only_admins_can_approve_pending_task():
     current = {"id": "task-1", "title": "Draft launch", "approval_status": "pending"}
-    updated = {**current, "approval_status": "approved", "approval_reviewed_by": "user-1"}
+    updated = {
+        **current,
+        "approval_status": "approved",
+        "approval_reviewed_by": "user-1",
+        "status": "done",
+        "completed_at": "2026-08-02T18:00:00Z",
+    }
     get_query = _query(current)
     db = Mock()
     db.table.side_effect = [get_query]
@@ -204,6 +211,64 @@ def test_only_admins_can_approve_pending_task():
 
     assert result == updated
     db.rpc.assert_called_once_with("review_task_approval", {"p_task_id": "task-1", "p_decision": "approved", "p_note": None})
+    activity_payloads = [
+        call.args[0]
+        for call in service.table.return_value.insert.call_args_list
+        if isinstance(call.args[0], dict) and "event_type" in call.args[0]
+    ]
+    assert [payload["event_type"] for payload in activity_payloads] == [
+        "task_approved",
+        "task_completed",
+    ]
+
+
+def test_rejection_reopens_task_for_changes():
+    updated = {
+        "id": "task-1",
+        "title": "Draft launch",
+        "approval_status": "rejected",
+        "approval_reviewed_by": "user-1",
+        "approval_note": "Needs changes",
+        "status": "todo",
+        "completed_at": None,
+    }
+    db = Mock()
+    rpc = Mock()
+    rpc.execute.return_value = Mock(data=updated)
+    db.rpc.return_value = rpc
+    ctx = _context(db)
+    ctx.role = "owner"
+    service = Mock()
+    service.table.return_value = _query([{}])
+
+    with patch("app.routers.tasks.get_service_client", return_value=service):
+        result = reject_task("task-1", "Needs changes", ctx)
+
+    assert result["status"] == "todo"
+    assert result["completed_at"] is None
+    db.rpc.assert_called_once_with(
+        "review_task_approval",
+        {"p_task_id": "task-1", "p_decision": "rejected", "p_note": "Needs changes"},
+    )
+
+
+def test_rejected_task_is_editable_for_resubmission():
+    current = {
+        "id": "task-1",
+        "title": "Draft launch",
+        "approval_status": "rejected",
+        "approval_note": "Needs changes",
+    }
+    updated = {**current, "title": "Final launch", "status": "todo"}
+    db = Mock()
+    db.table.side_effect = [_query(current), _query([updated])]
+    service = Mock()
+    service.table.return_value = _query([{}])
+
+    with patch("app.routers.tasks.get_service_client", return_value=service):
+        result = update_task("task-1", TaskUpdate(title="Final launch"), _context(db))
+
+    assert result["title"] == "Final launch"
 
 
 def test_reviewer_cannot_decide_on_non_pending_task():
@@ -226,6 +291,45 @@ def test_approved_task_is_locked_against_edits():
         update_task("task-1", TaskUpdate(title="Changed after approval"), _context(db))
     assert exc_info.value.status_code == 409
     assert exc_info.value.detail["error"]["code"] == "approval_locked"
+
+
+def test_approved_task_is_locked_against_deletion():
+    db = Mock()
+    query = _query({"id": "task-1", "title": "Approved", "approval_status": "approved"})
+    db.table.return_value = query
+
+    with pytest.raises(HTTPException) as exc_info:
+        delete_task("task-1", _context(db))
+
+    assert exc_info.value.status_code == 409
+    assert exc_info.value.detail["error"]["code"] == "approval_locked"
+    query.delete.assert_not_called()
+
+
+def test_pending_task_must_be_reviewed_before_deletion():
+    db = Mock()
+    query = _query({"id": "task-1", "title": "Pending", "approval_status": "pending"})
+    db.table.return_value = query
+
+    with pytest.raises(HTTPException) as exc_info:
+        delete_task("task-1", _context(db))
+
+    assert exc_info.value.status_code == 409
+    assert exc_info.value.detail["error"]["code"] == "approval_pending"
+    query.delete.assert_not_called()
+
+
+def test_rejected_task_can_be_edited_but_not_deleted_with_its_history():
+    db = Mock()
+    query = _query({"id": "task-1", "title": "Rejected", "approval_status": "rejected"})
+    db.table.return_value = query
+
+    with pytest.raises(HTTPException) as exc_info:
+        delete_task("task-1", _context(db))
+
+    assert exc_info.value.status_code == 409
+    assert exc_info.value.detail["error"]["code"] == "approval_history_locked"
+    query.delete.assert_not_called()
 
 
 def test_review_requires_team_plan():

@@ -91,10 +91,14 @@ def _notify_approval(ctx: WorkspaceContext, task: dict, event: str) -> None:
             message = f'"{task["title"]}" is ready for review.'
             kind = "task_approval_requested"
         else:
-            recipient = task.get("approval_submitted_by")
-            recipient_ids = [recipient] if recipient and recipient != ctx.auth.user_id else []
+            recipients = {task.get("approval_submitted_by"), task.get("assignee_id")}
+            recipient_ids = [recipient for recipient in recipients if recipient and recipient != ctx.auth.user_id]
             title = f"Task {event}"
-            message = f'"{task["title"]}" was {event}.'
+            message = (
+                f'"{task["title"]}" was approved and completed.'
+                if event == "approved"
+                else f'"{task["title"]}" was rejected and reopened for changes.'
+            )
             kind = f"task_{event}"
         if recipient_ids:
             service.table("notifications").insert([
@@ -203,7 +207,13 @@ def update_task(task_id: str, body: TaskUpdate, ctx: WorkspaceContext = Depends(
 
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_task(task_id: str, ctx: WorkspaceContext = Depends(require_writer)) -> None:
-    _get_or_404(ctx, task_id)
+    current = _get_or_404(ctx, task_id)
+    if current.get("approval_status") == "pending":
+        raise HTTPException(status_code=409, detail={"error": {"code": "approval_pending", "message": "Resolve the pending review before deleting this task"}})
+    if current.get("approval_status") == "approved":
+        raise HTTPException(status_code=409, detail={"error": {"code": "approval_locked", "message": "Approved tasks are final records and cannot be deleted"}})
+    if current.get("approval_status") == "rejected":
+        raise HTTPException(status_code=409, detail={"error": {"code": "approval_history_locked", "message": "Reviewed tasks cannot be deleted because approval history is retained"}})
     ctx.db.table("tasks").delete().eq("id", task_id).eq("workspace_id", ctx.workspace_id).execute()
 
 
@@ -249,6 +259,8 @@ def _review_task(task_id: str, decision: str, note: Optional[str], ctx: Workspac
     if isinstance(updated, list): updated = updated[0] if updated else None
     if not updated: raise HTTPException(status_code=409, detail={"error": {"code": "approval_review_failed", "message": "Task review failed"}})
     _record_activity(ctx, updated, f"task_{decision}")
+    if decision == "approved":
+        _record_activity(ctx, updated, "task_completed")
     _notify_approval(ctx, updated, decision)
     return updated
 

@@ -144,3 +144,18 @@ def test_task_approval_integrity_is_database_enforced():
     assert "drop policy if exists members_update_admin" in sql
     assert "only the workspace owner can invite administrators" in sql
     assert "notification recipient is not a workspace member" in sql
+
+
+def test_task_approval_decision_atomically_completes_or_reopens_task():
+    sql = migration("0018_task_approval_completion.sql").lower()
+    assert "create or replace function public.review_task_approval" in sql
+    assert "for update" in sql
+    assert "when p_decision = 'approved' then 'done'::public.task_status" in sql
+    assert "when p_decision = 'approved' then decision_at" in sql
+    assert "else 'todo'::public.task_status" in sql
+    assert "else null" in sql
+    assert "insert into public.task_approval_events" in sql
+    assert "submitter cannot review their own task" in sql
+    assert "pending and approved tasks are locked" in sql
+    assert "reviewed tasks cannot be deleted because approval history is immutable" in sql
+    assert "before delete on public.tasks" in sql

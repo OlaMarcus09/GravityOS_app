@@ -16,6 +16,7 @@ ActivityEventType = Literal[
     "task_updated",
     "task_submitted_for_approval",
     "task_approved",
+    "task_completed",
     "task_rejected",
 ]
 

@@ -79,6 +79,8 @@ def test_owner_and_admin_can_approve_or_reject_pending_tasks(role, review, decis
         "title": "Approve artwork",
         "approval_status": decision,
         "approval_reviewed_by": USER_ID,
+        "status": "done" if decision == "approved" else "todo",
+        "completed_at": "2026-08-02T18:00:00Z" if decision == "approved" else None,
     }
     db = Mock()
     rpc = Mock()

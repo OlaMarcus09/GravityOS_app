@@ -112,6 +112,11 @@ export default function TasksPage() {
     return memberNames.get(userId) ?? "Team member";
   };
 
+  const reviewDate = (value: string) => new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+
   return (
     <div>
       <PageHeader
@@ -191,66 +196,100 @@ export default function TasksPage() {
             const deleting = remove.isPending && remove.variables === t.id;
             const updating = update.isPending && update.variables?.id === t.id;
             const approvalLocked = plan === "team" && (t.approval_status === "pending" || t.approval_status === "approved");
+            const deletionLocked = plan === "team" && t.approval_status !== "not_required";
+            const approved = plan === "team" && t.approval_status === "approved";
+            const rejected = plan === "team" && t.approval_status === "rejected";
             return (
               <Card
                 key={t.id}
                 className="task-list-row"
-                style={{ padding: "0.85rem 1rem", display: "flex", alignItems: "center", gap: "0.85rem" }}
+                style={{ padding: "1rem" }}
               >
-                <input
-                  type="checkbox"
-                  checked={t.status === "done"}
-                  onChange={() => !isReadOnly && toggleDone(t)}
-                  disabled={isReadOnly || updating || approvalLocked}
-                  style={{ width: 18, height: 18, accentColor: "var(--accent)", cursor: isReadOnly || approvalLocked ? "not-allowed" : "pointer" }}
-                />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div
-                    style={{
-                      fontWeight: 550,
-                      textDecoration: t.status === "done" ? "line-through" : "none",
-                      color: t.status === "done" ? "var(--muted)" : "var(--fg)",
-                    }}
-                  >
-                    {t.title}
+                <div className="task-row-main">
+                  <input
+                    type="checkbox"
+                    checked={t.status === "done" || approved}
+                    onChange={() => !isReadOnly && toggleDone(t)}
+                    disabled={isReadOnly || updating || approvalLocked}
+                    aria-label={approved ? `${t.title} is approved and completed` : `Mark ${t.title} complete`}
+                    style={{ width: 18, height: 18, flexShrink: 0, accentColor: "var(--success)", cursor: isReadOnly || approvalLocked ? "not-allowed" : "pointer" }}
+                  />
+                  <div className="task-row-copy">
+                    <div
+                      style={{
+                        fontWeight: 600,
+                        textDecoration: t.status === "done" || approved ? "line-through" : "none",
+                        color: t.status === "done" || approved ? "var(--muted)" : "var(--fg)",
+                      }}
+                    >
+                      {t.title}
+                    </div>
+                    <div className="task-row-meta">
+                      <span>Assignee: {t.assignee_id ? displayName(t.assignee_id) : "Unassigned"}</span>
+                      {plan === "team" && t.approval_submitted_by && (
+                        <span>Submitted by {displayName(t.approval_submitted_by)}</span>
+                      )}
+                      {t.due_date && <span>Due {t.due_date}</span>}
+                    </div>
                   </div>
-                  {t.due_date && (
-                    <div style={{ fontSize: "0.78rem", color: "var(--muted)" }}>Due {t.due_date}</div>
-                  )}
+                  <div className="task-row-badges">
+                    <Badge tone={toneFor(t.priority)}>{t.priority}</Badge>
+                    {approved ? (
+                      <Badge tone="success">Approved · Completed</Badge>
+                    ) : (
+                      <>
+                        <Badge tone={toneFor(t.status)}>{t.status.replace("_", " ")}</Badge>
+                        {plan === "team" && <Badge tone={toneFor(t.approval_status)}>{t.approval_status.replace("_", " ")}</Badge>}
+                      </>
+                    )}
+                  </div>
                 </div>
-                <Badge tone={toneFor(t.priority)}>{t.priority}</Badge>
-                <Badge tone={toneFor(t.status)}>{t.status.replace("_", " ")}</Badge>
-                {plan === "team" && <Badge tone={toneFor(t.approval_status)}>{t.approval_status.replace("_", " ")}</Badge>}
-                {plan === "team" && !isReadOnly && (t.approval_status === "not_required" || t.approval_status === "rejected") && (
-                  <Button size="sm" variant="ghost" disabled={submitting} onClick={() => submitForApproval(t)}>
-                    {submitting ? "Submitting…" : t.approval_status === "rejected" ? "Resubmit" : "Submit"}
-                  </Button>
+
+                {plan === "team" && t.approval_status !== "pending" && (t.approval_reviewed_at || t.approval_note) && (
+                  <div className={`task-review-outcome ${approved ? "approved" : "rejected"}`}>
+                    <div className="task-review-heading">
+                      <strong>{approved ? "Approved and completed" : "Changes requested"}</strong>
+                      {t.approval_reviewed_at && (
+                        <span>
+                          {displayName(t.approval_reviewed_by)} · {reviewDate(t.approval_reviewed_at)}
+                        </span>
+                      )}
+                    </div>
+                    {t.approval_note && <p>“{t.approval_note}”</p>}
+                    {rejected && !isReadOnly && (
+                      <p className="task-review-guidance">Edit the task using this feedback, then resubmit it for review.</p>
+                    )}
+                  </div>
                 )}
-                <Button size="sm" variant="ghost" onClick={() => setCommenting(t)}>
-                  Comments
-                </Button>
-                {!isReadOnly && (
-                  <div style={{ display: "flex", gap: "0.35rem" }}>
-                    <Button size="sm" variant="ghost" disabled={updating || approvalLocked} onClick={() => openEdit(t)}>
-                      Edit
+
+                <div className="task-row-actions">
+                  <Button size="sm" variant="ghost" onClick={() => setCommenting(t)}>
+                    Comments
+                  </Button>
+                  {!isReadOnly && !approvalLocked && (
+                    <Button size="sm" variant="ghost" disabled={updating} onClick={() => openEdit(t)}>
+                      {rejected ? "Edit changes" : "Edit"}
                     </Button>
+                  )}
+                  {plan === "team" && !isReadOnly && (t.approval_status === "not_required" || rejected) && (
+                    <Button size="sm" disabled={submitting} onClick={() => submitForApproval(t)}>
+                      {submitting ? "Submitting…" : rejected ? "Resubmit for review" : "Submit for review"}
+                    </Button>
+                  )}
+                  {!isReadOnly && !deletionLocked && (
                     <Button size="sm" variant="danger" disabled={deleting} onClick={() => deleteTask(t)}>
                       {deleting ? "Deleting…" : "Delete"}
                     </Button>
-                  </div>
-                )}
-                {plan === "team" && t.approval_status !== "pending" && (t.approval_reviewed_at || t.approval_note) && (
-                  <div style={{ flexBasis: "100%", paddingLeft: 32, color: "var(--muted)", fontSize: "0.78rem" }}>
-                    {t.approval_reviewed_at && (
-                      <span>
-                        {t.approval_status === "approved" ? "Approved" : "Rejected"} by {displayName(t.approval_reviewed_by)} on {new Date(t.approval_reviewed_at).toLocaleString()}
-                      </span>
-                    )}
-                    {t.approval_note && <div style={{ marginTop: "0.2rem", color: "var(--fg)" }}>“{t.approval_note}”</div>}
-                  </div>
-                )}
+                  )}
+                  {approvalLocked && (
+                    <span className="task-lock-copy">
+                      {approved ? "Final review complete" : "Locked while awaiting review"}
+                    </span>
+                  )}
+                </div>
+
                 {actionError?.taskId === t.id && (
-                  <div style={{ flexBasis: "100%", paddingLeft: 32 }}><ErrorText error={actionError.error} /></div>
+                  <div className="task-row-error"><ErrorText error={actionError.error} /></div>
                 )}
               </Card>
             );
