@@ -61,13 +61,15 @@ recipients against workspace membership.
 ## Deployment configuration
 
 - Render API has `SUPER_ADMIN_EMAILS` configured with the verified platform admin email.
-- Before the next external demo, verify the deployed commit, `/health`, production
-  `CORS_ORIGINS`, and `WEB_APP_URL`; these are managed Render variables.
+- Production deployment verified on 2026-08-02: Render and Vercel are live from
+  `main`, with production deployments for `4ce8769` and `bad2390` ready.
+- Before the next external demo, still run the API `/health`, production CORS,
+  invitation-link, and browser network checks against the live URLs.
 - Vercel should use the `apps/web` project root and point
-  `NEXT_PUBLIC_API_URL` at the deployed Render origin. Deployment status has not
-  been independently verified from this workstation.
-- Confirm Render and Vercel picked up commit `4ce8769`; manually redeploy the
-  latest `main` commit if either service is stale.
+  `NEXT_PUBLIC_API_URL` at the deployed Render origin. Deployment status is now
+  confirmed in the hosting dashboards.
+- The handoff-only commit `bad2390` is the latest `main` commit; product behavior
+  is included from `4ce8769`.
 - Confirm the deployed web build includes the Admin account support and Plan audit sections.
 - The guided Team demo setup and pitch flow are in [docs/DEMO.md](DEMO.md).
 
@@ -75,8 +77,8 @@ recipients against workspace membership.
 
 Start the next session here:
 
-1. Verify Render and Vercel deployed commit `4ce8769` and run the API health,
-   production CORS, invitation-link, and browser network checks.
+1. Run the API health, production CORS, invitation-link, and browser network
+   checks against the live Render/Vercel deployments.
 2. Live-test Team approvals with separate member, owner/admin, and viewer accounts,
    including rejection notes, resubmission, self-review prevention, and task locks.
 3. Run a live two-workspace isolation check using dedicated test accounts.
