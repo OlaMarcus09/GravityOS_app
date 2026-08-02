@@ -9,7 +9,9 @@ Last updated: 2026-08-02
 - Push product work to the `app` remote, not `origin`.
 - Do not add co-author metadata to commits.
 - GitHub `main` is the product/deployment branch; `app/master` is stale.
-- The current product batch is validated and ready to commit to `app/main`.
+- Latest product commit: `4ce8769 feat: complete team workflow demo readiness`.
+- Commit `4ce8769` is pushed to `GravityOS_app/main`; the working tree was clean
+  immediately after the push.
 
 ## Product direction
 
@@ -64,16 +66,21 @@ recipients against workspace membership.
 - Vercel should use the `apps/web` project root and point
   `NEXT_PUBLIC_API_URL` at the deployed Render origin. Deployment status has not
   been independently verified from this workstation.
-- Redeploy API and web after committing the current product batch.
+- Confirm Render and Vercel picked up commit `4ce8769`; manually redeploy the
+  latest `main` commit if either service is stale.
 - Confirm the deployed web build includes the Admin account support and Plan audit sections.
 - The guided Team demo setup and pitch flow are in [docs/DEMO.md](DEMO.md).
 
 ## Next work
 
-1. Push the validated product batch to `app/main`.
-2. Verify Render and Vercel deployed the resulting commit and run the health/CORS checks.
-3. Live-test Team approvals with separate member, owner/admin, and viewer accounts.
-4. Run a live two-workspace isolation check using dedicated test accounts.
+Start the next session here:
+
+1. Verify Render and Vercel deployed commit `4ce8769` and run the API health,
+   production CORS, invitation-link, and browser network checks.
+2. Live-test Team approvals with separate member, owner/admin, and viewer accounts,
+   including rejection notes, resubmission, self-review prevention, and task locks.
+3. Run a live two-workspace isolation check using dedicated test accounts.
+4. Confirm the platform-admin support and plan-audit sections in production.
 5. Seed and rehearse the guided demo workspace for artist managers and label owners.
 
 The reusable seed, narrative, role setup, approval walkthrough, fallbacks, and
