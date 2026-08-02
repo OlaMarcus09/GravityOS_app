@@ -8,8 +8,8 @@ Last updated: 2026-08-02
 - Active local branch: `master`
 - Push product work to the `app` remote, not `origin`.
 - Do not add co-author metadata to commits.
-- The cleaned history is on both GitHub `main` and `master`.
-- Current local hardening changes are uncommitted.
+- GitHub `main` is the product/deployment branch; `app/master` is stale.
+- The current product batch is validated and ready to commit to `app/main`.
 
 ## Product direction
 
@@ -29,6 +29,8 @@ comments, approval control, notifications, and an accountable activity history.
 - Immutable approval event history and server-side approval transitions.
 - Admin plan audit history, user search, suspension, and reactivation.
 - Cross-workspace reference validation and database tenancy guards.
+- Manager-facing approval review queue with review notes and decision context.
+- Verified member email display and filterable workspace activity.
 
 ## Supabase migrations
 
@@ -49,7 +51,7 @@ recipients against workspace membership.
 
 ## Validation
 
-- API suite: 72 tests passed.
+- API suite: 97 tests passed.
 - Frontend typecheck passed.
 - Frontend production build passed.
 - `git diff --check` passed.
@@ -57,19 +59,25 @@ recipients against workspace membership.
 ## Deployment configuration
 
 - Render API has `SUPER_ADMIN_EMAILS` configured with the verified platform admin email.
-- Redeploy API and web after committing the current hardening batch.
+- Before the next external demo, verify the deployed commit, `/health`, production
+  `CORS_ORIGINS`, and `WEB_APP_URL`; these are managed Render variables.
+- Vercel should use the `apps/web` project root and point
+  `NEXT_PUBLIC_API_URL` at the deployed Render origin. Deployment status has not
+  been independently verified from this workstation.
+- Redeploy API and web after committing the current product batch.
 - Confirm the deployed web build includes the Admin account support and Plan audit sections.
+- The guided Team demo setup and pitch flow are in [docs/DEMO.md](DEMO.md).
 
 ## Next work
 
-1. Commit and push the current migration `0017` hardening batch.
-2. Live-test Team approvals with member, owner/admin, and viewer accounts.
-3. Add approval notes, reviewer/date context, loading states, and action errors to the task UI.
-4. Add a manager-facing "Needs review" queue.
-5. Improve Team member identity display with verified email addresses.
-6. Add activity filtering by project, member, and event type.
-7. Run a two-workspace isolation test and a complete owner/admin/member/viewer permission matrix.
-8. Prepare a guided demo workspace and pitch flow for artist managers and label owners.
+1. Push the validated product batch to `app/main`.
+2. Verify Render and Vercel deployed the resulting commit and run the health/CORS checks.
+3. Live-test Team approvals with separate member, owner/admin, and viewer accounts.
+4. Run a live two-workspace isolation check using dedicated test accounts.
+5. Seed and rehearse the guided demo workspace for artist managers and label owners.
+
+The reusable seed, narrative, role setup, approval walkthrough, fallbacks, and
+reset checklist are in [docs/DEMO.md](DEMO.md).
 
 Do not start Stripe billing or mobile packaging until the user-testing cycle
 produces enough feedback to justify those investments.

@@ -140,7 +140,7 @@ The intended deployment topology is:
 
 Set the API environment variables in Render. In particular, `SUPER_ADMIN_EMAILS` must contain the verified platform administrator email. It is intentionally empty in the repository example and is not hard-coded in the API.
 
-When deploying a new database migration, apply it before testing the corresponding release. Current product migrations are numbered through `0016_task_approvals.sql`.
+When deploying a new database migration, apply it before testing the corresponding release. Current product migrations are numbered through `0017_team_workflow_integrity.sql`.
 
 ## Security model
 

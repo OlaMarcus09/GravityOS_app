@@ -7,6 +7,17 @@ from pydantic import BaseModel, Field, field_validator
 
 
 TargetType = Literal["project", "task"]
+ActivityEventType = Literal[
+    "comment.created",
+    "comment.deleted",
+    "project_created",
+    "project_updated",
+    "task_created",
+    "task_updated",
+    "task_submitted_for_approval",
+    "task_approved",
+    "task_rejected",
+]
 
 
 class CommentCreate(BaseModel):

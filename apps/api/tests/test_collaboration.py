@@ -9,7 +9,7 @@ from fastapi import HTTPException
 
 from app.core.auth import AuthContext
 from app.core.deps import WorkspaceContext
-from app.routers.collaboration import _notify_mentions, delete_comment
+from app.routers.collaboration import _notify_mentions, delete_comment, list_activity
 
 
 def workspace_context(*, role: str = "member", user_id: str = "11111111-1111-1111-1111-111111111111"):
@@ -110,3 +110,62 @@ def test_admin_can_delete_another_authors_comment():
         delete_comment(UUID("44444444-4444-4444-4444-444444444444"), ctx)
 
     query.delete.assert_called_once()
+
+
+def test_activity_filters_preserve_workspace_scope():
+    ctx = workspace_context(role="viewer")
+    project_id = UUID("55555555-5555-5555-5555-555555555555")
+    member_id = UUID("22222222-2222-2222-2222-222222222222")
+    task_query = Mock()
+    task_query.select.return_value = task_query
+    task_query.eq.return_value = task_query
+    task_query.execute.return_value = Mock(data=[{"id": "66666666-6666-6666-6666-666666666666"}])
+    activity_query = Mock()
+    for method in ("select", "eq", "or_", "order", "limit"):
+        getattr(activity_query, method).return_value = activity_query
+    activity_query.execute.return_value = Mock(data=[])
+    ctx.db.table.side_effect = [activity_query, task_query]
+
+    with patch("app.routers.collaboration.get_service_client"):
+        result = list_activity(
+            limit=25,
+            before=None,
+            project_id=project_id,
+            member_id=member_id,
+            event_type="task_approved",
+            ctx=ctx,
+        )
+
+    assert result == []
+    activity_query.eq.assert_any_call("workspace_id", ctx.workspace_id)
+    activity_query.eq.assert_any_call("actor_id", str(member_id))
+    activity_query.eq.assert_any_call("event_type", "task_approved")
+    task_query.eq.assert_any_call("workspace_id", ctx.workspace_id)
+    task_query.eq.assert_any_call("project_id", str(project_id))
+    project_filter = activity_query.or_.call_args.args[0]
+    assert f"target_id.eq.{project_id}" in project_filter
+    assert "target_id.in.(66666666-6666-6666-6666-666666666666)" in project_filter
+
+
+def test_activity_filters_are_optional_and_before_still_paginates():
+    ctx = workspace_context(role="viewer")
+    activity_query = Mock()
+    for method in ("select", "eq", "lt", "order", "limit"):
+        getattr(activity_query, method).return_value = activity_query
+    activity_query.execute.return_value = Mock(data=[])
+    ctx.db.table.return_value = activity_query
+
+    with patch("app.routers.collaboration.get_service_client"):
+        result = list_activity(
+            limit=50,
+            before="2026-08-01T00:00:00Z",
+            project_id=None,
+            member_id=None,
+            event_type=None,
+            ctx=ctx,
+        )
+
+    assert result == []
+    activity_query.eq.assert_called_once_with("workspace_id", ctx.workspace_id)
+    activity_query.lt.assert_called_once_with("created_at", "2026-08-01T00:00:00Z")
+    activity_query.or_.assert_not_called()

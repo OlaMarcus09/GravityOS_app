@@ -50,13 +50,18 @@ export default function TeamPage() {
         <ErrorText error={members.error} />
         <div style={{ display: "flex", flexDirection: "column", gap: "0.7rem", marginTop: "1rem" }}>
           {(members.data ?? []).map((member) => {
-            const label = member.profiles?.display_name || member.user_id.slice(0, 8);
+            const displayName = member.profiles?.display_name;
+            const label = displayName || member.email || member.user_id.slice(0, 8);
+            const details = [
+              displayName && member.email ? member.email : null,
+              member.joined_at ? `Joined ${new Date(member.joined_at).toLocaleDateString()}` : "Workspace member",
+            ].filter(Boolean).join(" · ");
             const isOwner = member.role === "owner";
             return (
               <div key={member.user_id} className="team-list-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap", padding: "0.7rem 0", borderBottom: "1px solid var(--border)" }}>
                 <div className="team-list-copy">
                   <strong>{label}</strong>
-                  <p style={{ margin: "0.2rem 0 0", color: "var(--muted)", fontSize: "0.78rem" }}>{member.joined_at ? `Joined ${new Date(member.joined_at).toLocaleDateString()}` : "Workspace member"}</p>
+                  <p style={{ margin: "0.2rem 0 0", color: "var(--muted)", fontSize: "0.78rem" }}>{details}</p>
                 </div>
                 <div className="team-member-actions" style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
                   {isOwner || !canManage ? (

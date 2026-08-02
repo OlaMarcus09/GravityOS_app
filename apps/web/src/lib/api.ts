@@ -157,6 +157,7 @@ export type WorkspaceMember = {
   id: string;
   workspace_id: string;
   user_id: string;
+  email?: string | null;
   role: "owner" | "admin" | "member" | "viewer";
   invited_at: string | null;
   joined_at: string | null;
@@ -241,6 +242,23 @@ export type ActivityItem = {
   actor?: (CollaborationProfile & { id: string }) | null;
 };
 
+export type ActivityEventType =
+  | "comment.created"
+  | "comment.deleted"
+  | "project_created"
+  | "project_updated"
+  | "task_created"
+  | "task_updated"
+  | "task_submitted_for_approval"
+  | "task_approved"
+  | "task_rejected";
+
+export type ActivityFilters = {
+  projectId?: string;
+  memberId?: string;
+  eventType?: ActivityEventType;
+};
+
 export const collaborationApi = {
   comments: (ws: string, targetType: CollaborationTarget, targetId: string) => {
     const params = new URLSearchParams({ target_type: targetType, target_id: targetId });
@@ -252,8 +270,13 @@ export const collaborationApi = {
   ) => apiFetch<CollaborationComment>("/collaboration/comments", { method: "POST", body, workspaceId: ws }),
   removeComment: (ws: string, id: string) =>
     apiFetch<void>(`/collaboration/comments/${id}`, { method: "DELETE", workspaceId: ws }),
-  activity: (ws: string, limit = 100) =>
-    apiFetch<ActivityItem[]>(`/collaboration/activity?limit=${limit}`, { workspaceId: ws }),
+  activity: (ws: string, limit = 100, filters: ActivityFilters = {}) => {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (filters.projectId) params.set("project_id", filters.projectId);
+    if (filters.memberId) params.set("member_id", filters.memberId);
+    if (filters.eventType) params.set("event_type", filters.eventType);
+    return apiFetch<ActivityItem[]>(`/collaboration/activity?${params}`, { workspaceId: ws });
+  },
 };
 
 // --- Tasks -----------------------------------------------------------------

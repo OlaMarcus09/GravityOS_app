@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.core.db import get_service_client
 from app.core.deps import WorkspaceContext, get_workspace_context, require_writer
 from app.core.rate_limit import check_rate_limit
-from app.schemas.collaboration import CommentCreate
+from app.schemas.collaboration import ActivityEventType, CommentCreate
 
 router = APIRouter(prefix="/collaboration", tags=["collaboration"])
 
@@ -246,6 +246,9 @@ def delete_comment(
 def list_activity(
     limit: int = Query(50, ge=1, le=100),
     before: str | None = Query(None),
+    project_id: UUID | None = Query(None),
+    member_id: UUID | None = Query(None),
+    event_type: ActivityEventType | None = Query(None),
     ctx: WorkspaceContext = Depends(get_workspace_context),
 ) -> list[dict]:
     query = (
@@ -253,5 +256,30 @@ def list_activity(
     )
     if before:
         query = query.lt("created_at", before)
+    if project_id:
+        project_id_string = str(project_id)
+        task_rows = (
+            ctx.db.table("tasks")
+            .select("id")
+            .eq("workspace_id", ctx.workspace_id)
+            .eq("project_id", project_id_string)
+            .execute()
+            .data
+            or []
+        )
+        project_conditions = [
+            f"and(target_type.eq.project,target_id.eq.{project_id_string})",
+            f"metadata->>project_id.eq.{project_id_string}",
+        ]
+        task_ids = [row["id"] for row in task_rows]
+        if task_ids:
+            project_conditions.append(
+                f"and(target_type.eq.task,target_id.in.({','.join(task_ids)}))"
+            )
+        query = query.or_(",".join(project_conditions))
+    if member_id:
+        query = query.eq("actor_id", str(member_id))
+    if event_type:
+        query = query.eq("event_type", event_type)
     rows = query.order("created_at", desc=True).limit(limit).execute().data or []
     return _attach_profiles(rows, "actor_id", "actor")

@@ -12,6 +12,7 @@ from app.routers.projects import create_project
 from app.routers.workspaces import (
     accept_invitation,
     create_invitation,
+    list_members,
     remove_member,
     resend_invitation,
     revoke_invitation,
@@ -88,6 +89,56 @@ def test_missing_workspace_membership_is_forbidden_when_supabase_returns_none():
 
     assert exc_info.value.status_code == 403
     assert exc_info.value.detail["error"]["code"] == "not_a_member"
+
+
+def test_list_members_returns_auth_email_only_for_workspace_members():
+    membership_query = Mock()
+    membership_query.select.return_value = membership_query
+    membership_query.eq.return_value = membership_query
+    membership_query.execute.return_value = Mock(data=[
+        {
+            "id": "membership-1",
+            "workspace_id": "workspace-1",
+            "user_id": "user-1",
+            "role": "owner",
+        },
+        {
+            "id": "membership-2",
+            "workspace_id": "workspace-1",
+            "user_id": "user-2",
+            "role": "member",
+        },
+    ])
+    db = Mock()
+    db.table.return_value = membership_query
+
+    profile_query = Mock()
+    profile_query.select.return_value = profile_query
+    profile_query.in_.return_value = profile_query
+    profile_query.execute.return_value = Mock(data=[
+        {"id": "user-1", "display_name": "Owner", "avatar_url": None},
+        {"id": "user-2", "display_name": "Artist", "avatar_url": None},
+    ])
+    service = Mock()
+    service.table.return_value = profile_query
+    service.auth.admin.get_user_by_id.side_effect = [
+        Mock(user=Mock(email="owner@example.com")),
+        Mock(user=Mock(email="artist@example.com")),
+    ]
+
+    with patch("app.routers.workspaces.get_service_client", return_value=service):
+        result = list_members(workspace_context(role="viewer", plan="team", db=db))
+
+    assert [member["email"] for member in result] == [
+        "owner@example.com",
+        "artist@example.com",
+    ]
+    assert result[1]["profiles"]["display_name"] == "Artist"
+    membership_query.eq.assert_called_once_with("workspace_id", "workspace-1")
+    assert [call.args[0] for call in service.auth.admin.get_user_by_id.call_args_list] == [
+        "user-1",
+        "user-2",
+    ]
 
 
 def test_create_invitation_handles_missing_existing_invite_response():

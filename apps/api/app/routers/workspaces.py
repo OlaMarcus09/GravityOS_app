@@ -261,9 +261,11 @@ def list_members(ctx: WorkspaceContext = Depends(get_workspace_context)) -> list
     )
     user_ids = [row["user_id"] for row in rows]
     profiles = {}
+    emails: dict[str, str | None] = {}
     if user_ids:
+        svc = get_service_client()
         data = (
-            get_service_client()
+            svc
             .table("profiles")
             .select("id,display_name,avatar_url")
             .in_("id", user_ids)
@@ -272,12 +274,20 @@ def list_members(ctx: WorkspaceContext = Depends(get_workspace_context)) -> list
             or []
         )
         profiles = {profile["id"]: profile for profile in data}
+        for user_id in user_ids:
+            try:
+                auth_user = svc.auth.admin.get_user_by_id(user_id).user
+                emails[user_id] = auth_user.email if auth_user else None
+            except Exception:
+                # A missing Auth record should not hide the workspace membership.
+                emails[user_id] = None
     for row in rows:
         profile = profiles.get(row["user_id"], {})
         row["profiles"] = {
             "display_name": profile.get("display_name"),
             "avatar_url": profile.get("avatar_url"),
         }
+        row["email"] = emails.get(row["user_id"])
     return rows
 
 

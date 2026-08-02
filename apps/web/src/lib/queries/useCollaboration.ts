@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { collaborationApi, type CollaborationTarget } from "@/lib/api";
+import { collaborationApi, type ActivityFilters, type CollaborationTarget } from "@/lib/api";
 import { useWorkspaceId } from "@/lib/workspace";
 
 export function useComments(targetType: CollaborationTarget, targetId: string | null) {
@@ -40,11 +40,11 @@ export function useCommentMutations(targetType: CollaborationTarget, targetId: s
   };
 }
 
-export function useActivity(limit = 100) {
+export function useActivity(filters: ActivityFilters = {}, limit = 100) {
   const workspaceId = useWorkspaceId();
   return useQuery({
-    queryKey: ["collaboration", "activity", workspaceId, limit],
-    queryFn: () => collaborationApi.activity(workspaceId!, limit),
+    queryKey: ["collaboration", "activity", workspaceId, limit, filters],
+    queryFn: () => collaborationApi.activity(workspaceId!, limit, filters),
     enabled: Boolean(workspaceId),
     refetchInterval: 30_000,
   });
