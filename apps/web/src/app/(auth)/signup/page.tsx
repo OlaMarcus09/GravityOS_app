@@ -12,14 +12,16 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [confirmationEmail, setConfirmationEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const { error } = await supabase.auth.signUp({
-      email,
+    const normalizedEmail = email.trim().toLowerCase();
+    const { data, error } = await supabase.auth.signUp({
+      email: normalizedEmail,
       password,
       options: { emailRedirectTo: `${window.location.origin}/login` },
     });
@@ -28,7 +30,11 @@ export default function SignupPage() {
       setError(error.message);
       return;
     }
-    router.push("/dashboard");
+    if (data.session) {
+      router.replace("/dashboard");
+      return;
+    }
+    setConfirmationEmail(normalizedEmail);
   }
 
   return (
@@ -51,13 +57,21 @@ export default function SignupPage() {
         <h1 style={{ marginBottom: "0.4rem" }}>Create your account</h1>
         <p style={{ color: "var(--muted)", marginBottom: "1.75rem" }}>Start building your creative career.</p>
 
-        <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+        {confirmationEmail ? (
+          <div role="status" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            <p style={{ color: "var(--muted)", margin: 0 }}>
+              Check <strong style={{ color: "var(--fg)" }}>{confirmationEmail}</strong> for a confirmation link, then log in.
+            </p>
+            <Link href="/login"><Button style={{ width: "100%" }}>Go to login</Button></Link>
+          </div>
+        ) : <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           <Field label="Email">
             <Input
               type="email"
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
               required
             />
           </Field>
@@ -67,6 +81,8 @@ export default function SignupPage() {
               placeholder="At least 6 characters"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              minLength={6}
+              autoComplete="new-password"
               required
             />
           </Field>
@@ -74,7 +90,7 @@ export default function SignupPage() {
           <Button type="submit" disabled={loading} style={{ width: "100%", marginTop: "0.25rem" }}>
             {loading ? "Creating…" : "Create account"}
           </Button>
-        </form>
+        </form>}
 
         <p style={{ color: "var(--muted)", fontSize: "0.85rem", marginTop: "1.5rem", textAlign: "center" }}>
           Already have an account? <Link href="/login">Log in</Link>

@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties, ReactNode } from "react";
+import { useEffect, type CSSProperties, type ReactNode } from "react";
 
 // Small design-system kit. Inline styles reference the tokens in globals.css so
 // the whole app stays visually consistent without a CSS framework dependency.
@@ -224,42 +224,38 @@ export function Modal({
   title: string;
   children: ReactNode;
 }) {
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open, onClose]);
+
   if (!open) return null;
   return (
     <div
+      className="modal-backdrop"
       onClick={onClose}
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.6)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "1rem",
-        zIndex: 50,
-      }}
+      role="presentation"
     >
       <div
+        className="modal-panel"
         onClick={(e) => e.stopPropagation()}
-        style={{
-          width: "100%",
-          maxWidth: 460,
-          background: "var(--surface)",
-          border: "1px solid var(--border-strong)",
-          borderRadius: "var(--radius-lg)",
-          boxShadow: "var(--shadow)",
-          padding: "1.5rem",
-        }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
       >
         <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: "1.25rem",
-          }}
+          className="modal-header"
         >
-          <h2>{title}</h2>
+          <h2 id="modal-title">{title}</h2>
           <button
             onClick={onClose}
             aria-label="Close"
@@ -275,7 +271,7 @@ export function Modal({
             ×
           </button>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.9rem" }}>{children}</div>
+        <div className="modal-content">{children}</div>
       </div>
     </div>
   );

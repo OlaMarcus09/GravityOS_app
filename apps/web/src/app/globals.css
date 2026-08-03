@@ -180,6 +180,22 @@ h2 {
 .mobile-tabbar {
   display: none;
 }
+.mobile-more-menu,
+.mobile-more-backdrop {
+  display: none;
+}
+
+/* iPad and small laptop widths get a stable icon rail, leaving the content
+   area wide enough for forms and task cards in portrait orientation. */
+@media (min-width: 769px) and (max-width: 1100px) {
+  .app-main {
+    padding: 1.5rem;
+  }
+
+  .app-notification-bar {
+    margin-right: 0;
+  }
+}
 
 @media (max-width: 768px) {
   .app-sidebar {
@@ -208,7 +224,7 @@ h2 {
     border-bottom: 1px solid var(--border);
   }
 
-  /* 7 icon-only tabs pinned to the bottom of the viewport. */
+  /* Five large, labelled targets pinned to the bottom of the viewport. */
   .mobile-tabbar {
     display: flex;
     position: fixed;
@@ -216,12 +232,86 @@ h2 {
     left: 0;
     right: 0;
     z-index: 50;
-    gap: 1px;
-    padding: 0.35rem 0.35rem calc(0.35rem + env(safe-area-inset-bottom));
+    gap: 0.2rem;
+    padding: 0.35rem 0.45rem calc(0.35rem + env(safe-area-inset-bottom));
     background: var(--surface);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
     border-top: 1px solid var(--border);
+  }
+
+  .mobile-more-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    border: 0;
+    background: rgba(2, 3, 9, 0.68);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+  }
+
+  .mobile-more-menu {
+    display: block;
+    position: fixed;
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: calc(4.8rem + env(safe-area-inset-bottom));
+    z-index: 60;
+    max-height: min(65vh, 520px);
+    padding: 1rem;
+    overflow-y: auto;
+  }
+
+  .mobile-more-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .mobile-more-heading > div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .mobile-more-heading button {
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: var(--surface-2);
+    color: var(--fg);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .mobile-more-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+
+  .mobile-more-item {
+    min-height: 64px;
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  .mobile-more-item.active {
+    border-color: rgba(245, 165, 36, 0.4);
+    background: var(--accent-soft);
+    color: var(--accent);
   }
 }
 
@@ -339,13 +429,18 @@ h2 {
   align-items: center;
   justify-content: center;
   gap: 3px;
-  padding: 0.4rem 0.1rem;
+  min-height: 52px;
+  padding: 0.4rem 0.15rem;
+  border: 0;
   border-radius: var(--radius-sm);
+  background: transparent;
   color: var(--muted-2);
-  font-size: 0.58rem;
+  font-family: inherit;
+  font-size: 0.62rem;
   font-weight: 600;
   letter-spacing: 0.01em;
   line-height: 1;
+  cursor: pointer;
 }
 .tab-item.active {
   color: var(--accent);
@@ -390,6 +485,55 @@ h2 {
   gap: 1rem;
   margin-bottom: 1.5rem;
   flex-wrap: wrap;
+}
+
+/* Dialogs remain reachable when a phone keyboard reduces the visual viewport. */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.modal-panel {
+  width: 100%;
+  max-width: 460px;
+  max-height: calc(100dvh - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+
+.modal-header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-content {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 1.25rem 1.5rem max(1.5rem, env(safe-area-inset-bottom));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Invitation forms stay usable on phones instead of forcing horizontal scroll. */
@@ -554,7 +698,136 @@ h2 {
   overflow-y: auto;
 }
 
+.cal-agenda {
+  display: none;
+}
+
+.event-form-actions,
+.event-form-primary-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.event-form-actions {
+  justify-content: space-between;
+  margin-top: 0.5rem;
+}
+
 @media (max-width: 768px) {
+  .modal-backdrop {
+    align-items: flex-end;
+    padding: max(0.5rem, env(safe-area-inset-top)) 0 0;
+  }
+  .modal-panel {
+    max-width: none;
+    max-height: calc(100dvh - max(0.5rem, env(safe-area-inset-top)));
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    border-bottom: 0;
+  }
+  .modal-header {
+    padding: 1rem 1rem 0.85rem;
+  }
+  .modal-content {
+    padding: 1rem max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+  }
+  .modal-content input,
+  .modal-content select,
+  .modal-content textarea {
+    font-size: 16px !important;
+  }
+  .calendar-month-card {
+    display: none;
+  }
+  .cal-agenda {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .cal-agenda-day {
+    padding: 0;
+    overflow: hidden;
+  }
+  .cal-agenda-date {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 0.9rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-2);
+  }
+  .cal-agenda-date time {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+  .cal-agenda-date strong {
+    font-size: 0.9rem;
+  }
+  .cal-agenda-date span {
+    color: var(--muted);
+    font-size: 0.72rem;
+  }
+  .cal-agenda-items {
+    display: flex;
+    flex-direction: column;
+    padding: 0.35rem 0.9rem 0.6rem;
+  }
+  .cal-agenda-item {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    width: 100%;
+    min-width: 0;
+    padding: 0.65rem 0;
+    color: var(--fg);
+    text-align: left;
+    text-decoration: none;
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+  }
+  .cal-agenda-item:last-child {
+    border-bottom: 0;
+  }
+  .cal-agenda-item-mark {
+    width: 9px;
+    height: 9px;
+    flex: 0 0 9px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .cal-agenda-item-copy {
+    min-width: 0;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+  .cal-agenda-item-copy strong {
+    overflow: hidden;
+    font-size: 0.84rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .cal-agenda-item-copy small {
+    color: var(--muted);
+    font-size: 0.72rem;
+    text-transform: capitalize;
+  }
+  .event-form-actions {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+  .event-form-actions > span,
+  .event-form-primary-actions {
+    display: flex;
+    width: 100%;
+  }
+  .event-form-actions button {
+    flex: 1;
+  }
   .cal-cell {
     min-height: 68px;
     padding: 0.2rem 0.25rem;

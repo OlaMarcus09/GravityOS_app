@@ -63,6 +63,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (typeof window === "undefined") return false;
     return localStorage.getItem(SIDEBAR_KEY) === "1";
   });
+  const [tabletCompact, setTabletCompact] = useState(false);
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const { memberships, workspaceId, setWorkspaceId } = useWorkspace();
   const { data: me } = useMe();
 
@@ -82,6 +84,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     });
   }, [router]);
 
+  useEffect(() => {
+    const query = window.matchMedia("(min-width: 769px) and (max-width: 1100px)");
+    const syncTabletLayout = () => setTabletCompact(query.matches);
+    syncTabletLayout();
+    query.addEventListener("change", syncTabletLayout);
+    return () => query.removeEventListener("change", syncTabletLayout);
+  }, []);
+
+  useEffect(() => {
+    setMobileMoreOpen(false);
+  }, [pathname]);
+
   if (!ready) {
     return (
       <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", color: "var(--muted)" }}>
@@ -97,6 +111,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     ...(memberships.find((m) => m.workspace_id === workspaceId)?.workspaces?.plan === "team" ? [TEAM_NAV] : []),
     ...(me?.capabilities.platform_admin ? [ADMIN_NAV] : []),
   ];
+  const sidebarCollapsed = collapsed || tabletCompact;
+  const mobilePrimaryNavigation = navigation.filter((item) =>
+    ["/dashboard", "/calendar", "/tasks", "/projects"].includes(item.href),
+  );
+  const mobileMoreNavigation = navigation.filter(
+    (item) => !mobilePrimaryNavigation.some((primaryItem) => primaryItem.href === item.href),
+  );
+  const mobileMoreActive = mobileMoreNavigation.some(
+    (item) => pathname === item.href || pathname.startsWith(item.href + "/"),
+  );
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -108,12 +132,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <aside
         className="glass app-sidebar"
         style={{
-          width: collapsed ? 64 : 232,
+          width: sidebarCollapsed ? 64 : 232,
           borderRadius: 0,
           borderTop: "none",
           borderBottom: "none",
           borderLeft: "none",
-          padding: collapsed ? "1.5rem 0.5rem" : "1.5rem 0.9rem",
+          padding: sidebarCollapsed ? "1.5rem 0.5rem" : "1.5rem 0.9rem",
           display: "flex",
           flexDirection: "column",
           gap: "0.25rem",
@@ -125,16 +149,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         }}
       >
         {/* Brand + collapse toggle */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "space-between", padding: collapsed ? "0" : "0 0.4rem", marginBottom: "1.5rem", minHeight: 26 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: sidebarCollapsed ? "center" : "space-between", padding: sidebarCollapsed ? "0" : "0 0.4rem", marginBottom: "1.5rem", minHeight: 26 }}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.55rem", overflow: "hidden" }}>
             <GravityMark size={26} />
-            {!collapsed && (
+            {!sidebarCollapsed && (
               <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, letterSpacing: "-0.01em", whiteSpace: "nowrap" }}>
                 Gravity OS
               </span>
             )}
           </div>
-          {!collapsed && (
+          {!sidebarCollapsed && !tabletCompact && (
             <button
               onClick={toggleSidebar}
               aria-label="Collapse sidebar"
@@ -156,7 +180,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* Expand button when collapsed */}
-        {collapsed && (
+        {collapsed && !tabletCompact && (
           <button
             onClick={toggleSidebar}
             aria-label="Expand sidebar"
@@ -178,7 +202,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         )}
 
         {/* Workspace switcher — hidden when collapsed */}
-        {!collapsed && memberships.length > 1 && (
+        {!sidebarCollapsed && memberships.length > 1 && (
           <select
             value={workspaceId ?? ""}
             onChange={(e) => setWorkspaceId(e.target.value)}
@@ -207,16 +231,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
-                title={collapsed ? item.label : undefined}
+                title={sidebarCollapsed ? item.label : undefined}
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: collapsed ? "center" : "flex-start",
+                  justifyContent: sidebarCollapsed ? "center" : "flex-start",
                   gap: "0.7rem",
                   color: active ? "var(--fg)" : "var(--muted)",
                   background: active ? "var(--accent-soft)" : "transparent",
                   boxShadow: active ? "inset 2px 0 0 var(--accent)" : "none",
-                  padding: collapsed ? "0.55rem" : "0.55rem 0.7rem",
+                  padding: sidebarCollapsed ? "0.55rem" : "0.55rem 0.7rem",
                   borderRadius: "var(--radius-sm)",
                   fontSize: "0.875rem",
                   fontWeight: active ? 600 : 500,
@@ -227,7 +251,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <span style={{ color: active ? "var(--accent)" : "var(--muted-2)", flexShrink: 0 }}>
                   <Icon path={item.icon} />
                 </span>
-                {!collapsed && item.label}
+                {!sidebarCollapsed && item.label}
               </Link>
             );
           })}
@@ -235,7 +259,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
           {/* User card */}
-          {collapsed ? (
+          {sidebarCollapsed ? (
             <div style={{ display: "flex", justifyContent: "center" }}>
               <Avatar name={displayName} src={me?.profile?.avatar_url} size={30} />
             </div>
@@ -267,7 +291,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               background: "transparent",
               border: "1px solid var(--border-strong)",
               color: "var(--muted)",
-              padding: collapsed ? "0.45rem" : "0.45rem 0.65rem",
+              padding: sidebarCollapsed ? "0.45rem" : "0.45rem 0.65rem",
               borderRadius: "var(--radius-sm)",
               fontSize: "0.8rem",
               cursor: "pointer",
@@ -275,7 +299,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               overflow: "hidden",
             }}
           >
-            {collapsed ? <Icon path="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" size={16} /> : "Sign out"}
+            {sidebarCollapsed ? <Icon path="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" size={16} /> : "Sign out"}
           </button>
         </div>
       </aside>
@@ -333,17 +357,60 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <main className="app-main"><div className="app-notification-bar"><NotificationsBell /></div>{children}</main>
       </div>
 
-      {/* Mobile-only bottom tab bar — 7 icon tabs, active tab shows its label. */}
+      {mobileMoreOpen && (
+        <>
+          <button
+            className="mobile-more-backdrop"
+            type="button"
+            aria-label="Close navigation menu"
+            onClick={() => setMobileMoreOpen(false)}
+          />
+          <section id="mobile-more-navigation" className="glass mobile-more-menu" aria-label="More navigation">
+            <div className="mobile-more-heading">
+              <div>
+                <span className="eyebrow">Workspace</span>
+                <strong>More tools</strong>
+              </div>
+              <button type="button" aria-label="Close navigation menu" onClick={() => setMobileMoreOpen(false)}>
+                ×
+              </button>
+            </div>
+            <div className="mobile-more-grid">
+              {mobileMoreNavigation.map((item) => {
+                const active = pathname === item.href || pathname.startsWith(item.href + "/");
+                return (
+                  <Link key={item.href} href={item.href} className={`mobile-more-item${active ? " active" : ""}`}>
+                    <Icon path={item.icon} size={21} />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        </>
+      )}
+
+      {/* Mobile-only bottom tab bar — core destinations plus an accessible More menu. */}
       <nav className="mobile-tabbar">
-        {navigation.map((item) => {
+        {mobilePrimaryNavigation.map((item) => {
           const active = pathname === item.href || pathname.startsWith(item.href + "/");
           return (
             <Link key={item.href} href={item.href} className={`tab-item${active ? " active" : ""}`}>
               <Icon path={item.icon} size={20} />
-              {active && <span className="tab-label">{item.label}</span>}
+              <span className="tab-label">{item.label}</span>
             </Link>
           );
         })}
+        <button
+          type="button"
+          className={`tab-item${mobileMoreActive || mobileMoreOpen ? " active" : ""}`}
+          aria-expanded={mobileMoreOpen}
+          aria-controls="mobile-more-navigation"
+          onClick={() => setMobileMoreOpen((open) => !open)}
+        >
+          <Icon path="M5 12h.01M12 12h.01M19 12h.01" size={22} />
+          <span className="tab-label">More</span>
+        </button>
       </nav>
     </div>
   );

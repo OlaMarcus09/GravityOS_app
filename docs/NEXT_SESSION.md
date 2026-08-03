@@ -1,6 +1,6 @@
 # Next session handoff
 
-Last updated: 2026-08-02
+Last updated: 2026-08-03
 
 ## Repository
 
@@ -9,7 +9,7 @@ Last updated: 2026-08-02
 - Push product work to the `app` remote, not `origin`.
 - Do not add co-author metadata to commits.
 - GitHub `main` is the product/deployment branch; `app/master` is stale.
-- Latest product commit: `4ce8769 feat: complete team workflow demo readiness`.
+- Latest product commit before this session: `4ce8769 feat: complete team workflow demo readiness`.
 - Commit `4ce8769` is pushed to `GravityOS_app/main`; the working tree was clean
   immediately after the push.
 
@@ -59,9 +59,28 @@ corrections, and protects reviewed-task history from deletion.
 ## Validation
 
 - API suite: 103 tests passed.
-- Frontend typecheck passed.
-- Frontend production build passed.
+- Frontend typecheck passed after the responsive/onboarding changes.
+- Frontend production build passed on Next.js `14.2.35`.
 - `git diff --check` passed.
+- Playwright smoke coverage is configured for desktop Chrome, iPhone-sized, and
+  iPad-sized viewports. The local macOS 11 machine cannot launch current bundled
+  Chromium/WebKit binaries (`CATapDescription`/orientation emulation errors), so
+  the browser suite must be run in CI or on a current macOS/Windows/Linux host.
+
+## Responsive and onboarding hardening completed
+
+- Mobile navigation now exposes Dashboard, Calendar, Tasks, Projects, and a
+  dismissible More sheet for secondary areas.
+- Small laptop/iPad widths use a compact icon sidebar without changing desktop
+  navigation.
+- Calendar switches to an agenda on phones, including events, task due dates,
+  releases, campaigns, scheduled content, and milestones.
+- Shared modals lock background scroll, support Escape, safe areas, internal
+  scrolling, and mobile bottom-sheet behavior; form controls avoid Safari zoom.
+- Login supports safe `?next=` redirects; signup handles confirmation-required
+  Supabase projects; invite acceptance surfaces errors and completes cleanly.
+- Next.js is pinned to patched `14.2.35`; Playwright smoke scripts are in
+  `apps/web/tests/e2e`.
 
 ## Deployment configuration
 
@@ -89,6 +108,9 @@ Start the next session here:
 3. Run a live two-workspace isolation check and confirm platform-admin support and
    plan-audit sections in production.
 4. Seed and rehearse the guided demo workspace for artist managers and label owners.
+5. On a current device/browser, verify laptop 1440×900 and 1280×800, iPad portrait
+   and landscape, and mobile Safari/Chrome. Use a disposable email to rehearse the
+   owner → Admin invitation flow before inviting the artist's real assistant.
 
 The reusable seed, narrative, role setup, approval walkthrough, fallbacks, and
 reset checklist are in [docs/DEMO.md](DEMO.md).

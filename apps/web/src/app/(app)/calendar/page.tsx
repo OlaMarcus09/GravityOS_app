@@ -113,6 +113,13 @@ export default function CalendarPage() {
   };
 
   const monthLabel = month.toLocaleString(undefined, { month: "long", year: "numeric" });
+  const agendaDays = grid.filter((day) => {
+    if (day.getMonth() !== month.getMonth()) return false;
+    const items = byDay.get(iso(day));
+    return items && (
+      items.events.length + items.dues.length + items.releases.length + items.campaigns.length + items.content.length + items.milestones.length
+    ) > 0;
+  });
 
   return (
     <div>
@@ -146,7 +153,7 @@ export default function CalendarPage() {
         />
       )}
 
-      <Card style={{ padding: "0.5rem", overflow: "hidden" }}>
+      <Card className="calendar-month-card" style={{ padding: "0.5rem", overflow: "hidden" }}>
         <div className="cal-grid">
           {WEEKDAYS.map((w) => (
             <div
@@ -328,6 +335,71 @@ export default function CalendarPage() {
         </div>
       </Card>
 
+      <div className="cal-agenda" aria-label={`${monthLabel} agenda`}>
+        {agendaDays.length === 0 && (
+          <Card style={{ textAlign: "center" }}>
+            <p style={{ margin: 0, color: "var(--muted)" }}>No scheduled items this month.</p>
+          </Card>
+        )}
+        {agendaDays.map((day) => {
+          const key = iso(day);
+          const cell = byDay.get(key)!;
+          const dayLabel = day.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+          return (
+            <Card className="cal-agenda-day" key={key}>
+              <div className="cal-agenda-date">
+                <time dateTime={key}>
+                  <strong>{dayLabel}</strong>
+                  <span>{key === todayIso ? "Today" : monthLabel}</span>
+                </time>
+                {!isReadOnly && <Button size="sm" variant="ghost" onClick={() => openCreate(key)}>+ Add</Button>}
+              </div>
+              <div className="cal-agenda-items">
+                {cell.events.map((event) => (
+                  <button className="cal-agenda-item" key={event.id} onClick={() => openEdit(event)}>
+                    <span className="cal-agenda-item-mark" />
+                    <span className="cal-agenda-item-copy">
+                      <strong>{event.title}</strong>
+                      <small>{event.all_day ? "All day event" : `${new Date(event.starts_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} · ${event.type}`}</small>
+                    </span>
+                  </button>
+                ))}
+                {cell.dues.map((task) => (
+                  <Link className="cal-agenda-item" href="/tasks" key={`due-${task.id}`}>
+                    <span className="cal-agenda-item-mark" style={{ background: "var(--warning)" }} />
+                    <span className="cal-agenda-item-copy"><strong>{task.title}</strong><small>Task due · {task.status.replaceAll("_", " ")}</small></span>
+                  </Link>
+                ))}
+                {cell.releases.map((release) => (
+                  <Link className="cal-agenda-item" href={`/projects/${release.id}/release-plan`} key={`release-${release.id}`}>
+                    <span className="cal-agenda-item-mark" style={{ background: "var(--accent)" }} />
+                    <span className="cal-agenda-item-copy"><strong>{release.title}</strong><small>{release.type} release · {release.status.replaceAll("_", " ")}</small></span>
+                  </Link>
+                ))}
+                {cell.campaigns.map((campaign) => (
+                  <Link className="cal-agenda-item" href="/marketing" key={`campaign-${campaign.id}`}>
+                    <span className="cal-agenda-item-mark" style={{ background: "#38bdf8" }} />
+                    <span className="cal-agenda-item-copy"><strong>{campaign.name}</strong><small>Campaign · {campaign.status.replaceAll("_", " ")}</small></span>
+                  </Link>
+                ))}
+                {cell.content.map((content) => (
+                  <Link className="cal-agenda-item" href="/marketing" key={`content-${content.id}`}>
+                    <span className="cal-agenda-item-mark" style={{ background: "#ec4899" }} />
+                    <span className="cal-agenda-item-copy"><strong>{content.caption || `${content.platform} ${content.format}`}</strong><small>{new Date(content.scheduled_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} · {content.platform} {content.format}</small></span>
+                  </Link>
+                ))}
+                {cell.milestones.map((milestone) => (
+                  <Link className="cal-agenda-item" href="/projects" key={`milestone-${milestone.id}`}>
+                    <span className="cal-agenda-item-mark" style={{ background: "var(--success)" }} />
+                    <span className="cal-agenda-item-copy"><strong>{milestone.title}</strong><small>{milestone.category} milestone · {milestone.status.replaceAll("_", " ")}</small></span>
+                  </Link>
+                ))}
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+
       <Modal open={open} onClose={() => setOpen(false)} title={editing ? "Edit event" : "New event"}>
         <EventForm
           key={editing?.id ?? seedDate ?? "new"}
@@ -422,7 +494,7 @@ function EventForm({
       <Field label="Notes">
         <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
       </Field>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: "0.5rem", marginTop: "0.5rem" }}>
+      <div className="event-form-actions">
         <span>
           {onDelete && (
             <Button variant="danger" onClick={onDelete}>
@@ -430,7 +502,7 @@ function EventForm({
             </Button>
           )}
         </span>
-        <span style={{ display: "flex", gap: "0.5rem" }}>
+        <span className="event-form-primary-actions">
           <Button variant="ghost" onClick={onCancel}>
             Cancel
           </Button>

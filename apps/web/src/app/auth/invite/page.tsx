@@ -12,6 +12,7 @@ export default function InvitePage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [ready, setReady] = useState(false);
+  const [passwordSaved, setPasswordSaved] = useState(false);
   const [loading, setLoading] = useState(false);
   const [pending, setPending] = useState<WorkspaceInvitation[]>([]);
   const [accepting, setAccepting] = useState<string | null>(null);
@@ -35,9 +36,10 @@ export default function InvitePage() {
       }
       setReady(true);
       try {
-        setPending(await invitationsApi.pending());
-      } catch {
-        // The authenticated app can still be reached if pending invites fail to load.
+        const invitations = await invitationsApi.pending();
+        setPending(invitations);
+      } catch (pendingError) {
+        setError(pendingError instanceof Error ? pendingError.message : "Your invitation could not be loaded.");
       }
     }
 
@@ -63,10 +65,13 @@ export default function InvitePage() {
       setError(updateError.message);
       return;
     }
+    setPasswordSaved(true);
     try {
       const invitations = await invitationsApi.pending();
       setPending(invitations);
-      if (invitations.length === 1) {
+      if (invitations.length === 0) {
+        setError("No pending workspace invitation was found for this account. Ask the workspace owner to resend it.");
+      } else if (invitations.length === 1) {
         await acceptInvitation(invitations[0]);
       }
     } catch (acceptError) {
@@ -104,7 +109,7 @@ export default function InvitePage() {
 
         {!ready && !error && <p style={{ color: "var(--muted)" }}>Verifying invitation...</p>}
 
-        {ready && (
+        {ready && !passwordSaved && (
           <form onSubmit={setAccountPassword} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             <Field label="Password">
               <Input
@@ -112,6 +117,8 @@ export default function InvitePage() {
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 placeholder="At least 6 characters"
+                minLength={6}
+                autoComplete="new-password"
                 required
               />
             </Field>
@@ -120,6 +127,8 @@ export default function InvitePage() {
                 type="password"
                 value={confirmPassword}
                 onChange={(event) => setConfirmPassword(event.target.value)}
+                minLength={6}
+                autoComplete="new-password"
                 required
               />
             </Field>
@@ -129,7 +138,11 @@ export default function InvitePage() {
           </form>
         )}
 
-        {ready && pending.length > 0 && (
+        {ready && passwordSaved && accepting && (
+          <p role="status" style={{ color: "var(--muted)" }}>Joining your workspace...</p>
+        )}
+
+        {ready && passwordSaved && pending.length > 1 && (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginTop: "1.25rem" }}>
             <span className="eyebrow">Workspace invitations</span>
             {pending.map((invitation) => (
