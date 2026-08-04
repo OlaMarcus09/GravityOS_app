@@ -1,6 +1,6 @@
 # Next session handoff
 
-Last updated: 2026-08-03
+Last updated: 2026-08-04
 
 ## Repository
 
@@ -9,9 +9,9 @@ Last updated: 2026-08-03
 - Push product work to the `app` remote, not `origin`.
 - Do not add co-author metadata to commits.
 - GitHub `main` is the product/deployment branch; `app/master` is stale.
-- Latest product commit before this session: `4ce8769 feat: complete team workflow demo readiness`.
-- Commit `4ce8769` is pushed to `GravityOS_app/main`; the working tree was clean
-  immediately after the push.
+- Latest product commit: `e8146da feat: harden responsive onboarding experience`.
+- `e8146da` is pushed to `GravityOS_app/main` and contains the responsive shell,
+  mobile calendar/modal work, onboarding fixes, and Playwright setup.
 
 ## Product direction
 
@@ -66,6 +66,8 @@ corrections, and protects reviewed-task history from deletion.
   iPad-sized viewports. The local macOS 11 machine cannot launch current bundled
   Chromium/WebKit binaries (`CATapDescription`/orientation emulation errors), so
   the browser suite must be run in CI or on a current macOS/Windows/Linux host.
+- Focused approval, permission, invitation, and migration-contract checks passed:
+  74 tests.
 
 ## Responsive and onboarding hardening completed
 
@@ -85,15 +87,16 @@ corrections, and protects reviewed-task history from deletion.
 ## Deployment configuration
 
 - Render API has `SUPER_ADMIN_EMAILS` configured with the verified platform admin email.
-- Production deployment verified on 2026-08-02: Render and Vercel are live from
-  `main`, with production deployments for `4ce8769` and `bad2390` ready.
+- Production deployment was previously verified on 2026-08-02 for earlier commits.
+  The `e8146da` deployment still needs confirmation in Render and Vercel.
 - Before the next external demo, still run the API `/health`, production CORS,
   invitation-link, and browser network checks against the live URLs.
 - Vercel should use the `apps/web` project root and point
   `NEXT_PUBLIC_API_URL` at the deployed Render origin. Deployment status is now
   confirmed in the hosting dashboards.
-- The handoff-only commit `bad2390` is the latest `main` commit; product behavior
-  is included from `4ce8769`.
+- The local `apps/web/.env` still points at `http://localhost:8000`; do not treat
+  local health failures as production failures. The hosted Vercel hostname was
+  unreachable from this environment, so use the current dashboard URL next session.
 - Confirm the deployed web build includes the Admin account support and Plan audit sections.
 - The guided Team demo setup and pitch flow are in [docs/DEMO.md](DEMO.md).
 
@@ -101,8 +104,8 @@ corrections, and protects reviewed-task history from deletion.
 
 Start the next session here:
 
-1. Confirm Render and Vercel deploy the new application commit, then run API health,
-   production CORS, invitation-link, and browser network checks.
+1. Confirm Render and Vercel deploy `e8146da`, then run API health, production CORS,
+   invitation-link, and browser network checks against the actual dashboard URLs.
 2. Live-test that approval marks a task `Approved · Completed`, while rejection
    reopens it for editing/resubmission and retains the decision history.
 3. Run a live two-workspace isolation check and confirm platform-admin support and
@@ -111,6 +114,9 @@ Start the next session here:
 5. On a current device/browser, verify laptop 1440×900 and 1280×800, iPad portrait
    and landscape, and mobile Safari/Chrome. Use a disposable email to rehearse the
    owner → Admin invitation flow before inviting the artist's real assistant.
+6. If production is green, run the complete pilot rehearsal: Owner creates task →
+   team member submits → Admin reviews → approval completes the task, while
+   rejection reopens it for correction and resubmission.
 
 The reusable seed, narrative, role setup, approval walkthrough, fallbacks, and
 reset checklist are in [docs/DEMO.md](DEMO.md).
