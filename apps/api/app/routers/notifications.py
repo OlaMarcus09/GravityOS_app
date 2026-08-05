@@ -2,14 +2,71 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel, Field, field_validator
 from supabase import Client
 
 from app.core.auth import AuthContext, get_auth_context
 from app.core.deps import get_db
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
+
+DEFAULT_REMINDER_DAYS = [3, 1, 0]
+
+
+class NotificationPreferencesUpdate(BaseModel):
+    email_enabled: bool = True
+    in_app_enabled: bool = True
+    task_assignments: bool = True
+    mentions: bool = True
+    approval_updates: bool = True
+    deadline_reminders: bool = True
+    reminder_days_before: list[int] = Field(
+        default_factory=lambda: DEFAULT_REMINDER_DAYS.copy(), min_length=1, max_length=10
+    )
+
+    @field_validator("reminder_days_before")
+    @classmethod
+    def validate_reminder_days(cls, value: list[int]) -> list[int]:
+        if any(day < 0 or day > 365 for day in value):
+            raise ValueError("reminder days must be between 0 and 365")
+        return sorted(set(value), reverse=True)
+
+
+def _default_preferences(user_id: str) -> dict:
+    return {
+        "user_id": user_id,
+        **NotificationPreferencesUpdate().model_dump(),
+    }
+
+
+@router.get("/preferences")
+def get_notification_preferences(
+    auth: AuthContext = Depends(get_auth_context),
+    db: Client = Depends(get_db),
+) -> dict:
+    result = (
+        db.table("notification_preferences")
+        .select("*")
+        .eq("user_id", auth.user_id)
+        .maybe_single()
+        .execute()
+    )
+    return result.data if result and result.data else _default_preferences(auth.user_id)
+
+
+@router.put("/preferences")
+def update_notification_preferences(
+    body: NotificationPreferencesUpdate,
+    auth: AuthContext = Depends(get_auth_context),
+    db: Client = Depends(get_db),
+) -> dict:
+    result = (
+        db.table("notification_preferences")
+        .upsert({"user_id": auth.user_id, **body.model_dump()}, on_conflict="user_id")
+        .execute()
+    )
+    return result.data[0] if result.data else {"user_id": auth.user_id, **body.model_dump()}
 
 
 @router.get("")

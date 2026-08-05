@@ -30,8 +30,7 @@ def test_mentions_notify_only_workspace_members_and_exclude_author():
     query.select.return_value = query
     query.eq.return_value = query
     query.in_.return_value = query
-    query.insert.return_value = query
-    query.execute.side_effect = [Mock(data=[{"user_id": member_id}]), Mock(data=[])]
+    query.execute.return_value = Mock(data=[{"user_id": member_id}])
     service = Mock()
     service.table.return_value = query
 
@@ -44,15 +43,18 @@ def test_mentions_notify_only_workspace_members_and_exclude_author():
         "target_type": "task",
         "target_id": "task-1",
     }
-    with patch("app.routers.collaboration.get_service_client", return_value=service):
+    with (
+        patch("app.routers.collaboration.get_service_client", return_value=service),
+        patch("app.routers.collaboration.create_notification") as notify,
+    ):
         _notify_mentions(ctx, body, comment, {"title": "Finish mix"})
 
     queried_ids = set(query.in_.call_args.args[1])
     assert queried_ids == {member_id, outsider_id}
-    payload = query.insert.call_args.args[0]
-    assert len(payload) == 1
-    assert payload[0]["recipient_id"] == member_id
-    assert payload[0]["kind"] == "comment_mention"
+    payload = notify.call_args.kwargs
+    assert payload["recipient_id"] == member_id
+    assert payload["kind"] == "comment_mention"
+    assert payload["dedupe_key"] == f"comment-mention:comment-1:{member_id}"
 
 
 def test_malformed_mention_is_ignored():

@@ -159,3 +159,96 @@ def test_task_approval_decision_atomically_completes_or_reopens_task():
     assert "pending and approved tasks are locked" in sql
     assert "reviewed tasks cannot be deleted because approval history is immutable" in sql
     assert "before delete on public.tasks" in sql
+
+
+def test_enterprise_plan_is_reserved_in_its_own_migration():
+    sql = migration("0019_enterprise_plan.sql").lower()
+    assert "alter type public.workspace_plan add value if not exists 'enterprise'" in sql
+
+
+def test_organization_links_are_owner_opt_in_and_org_access_is_read_only():
+    sql = migration("0020_enterprise_foundations.sql").lower()
+
+    for table in ("organizations", "organization_members", "org_workspace_links"):
+        assert f"create table public.{table}" in sql
+        assert f"alter table public.{table} enable row level security" in sql
+
+    assert "create or replace function private.is_org_member(org uuid)" in sql
+    assert "create or replace function private.has_org_workspace_read(ws uuid)" in sql
+    assert "create or replace function private.can_bootstrap_org_owner(org uuid)" in sql
+    assert "owner_id = auth.uid() or private.is_org_member(id)" in sql
+    assert "private.can_bootstrap_org_owner(org_id)" in sql
+    assert "org_workspace_links_insert_workspace_owner" in sql
+    assert "linked_by = auth.uid()" in sql
+    assert "array['owner']::public.member_role[]" in sql
+
+    for table in ("workspaces", "projects", "tasks", "release_plans", "budgets", "gravity_scores"):
+        assert f"create policy {table}_select_org_member" in sql
+    assert "private.has_org_workspace_read(workspace_id)" in sql
+    assert "projects_insert_org" not in sql
+    assert "tasks_update_org" not in sql
+
+
+def test_streaming_foundations_are_all_plan_member_readable_and_service_written():
+    sql = migration("0020_enterprise_foundations.sql").lower()
+
+    assert "create table public.artist_streaming_links" in sql
+    assert "create table public.streaming_snapshots" in sql
+    assert "streaming_snapshots_artist_workspace_fk" in sql
+    assert "artist_streaming_links_select" in sql
+    assert "streaming_snapshots_select" in sql
+    assert "private.is_workspace_member(workspace_id)" in sql
+    assert "has_workspace_plan" not in sql
+    assert "workspace_plan" not in sql.split("-- soundcharts identity links", 1)[1]
+    assert "revoke insert, update, delete on public.streaming_snapshots" in sql
+
+
+def test_proactive_notification_preferences_are_owned_by_each_user():
+    sql = migration("0021_proactive_notifications.sql").lower()
+
+    assert "create table public.notification_preferences" in sql
+    assert "alter table public.notification_preferences enable row level security" in sql
+    for operation in ("select", "insert", "update", "delete"):
+        assert f"notification_preferences_{operation}_own" in sql
+    assert "user_id = auth.uid()" in sql
+    assert "email_enabled" in sql
+    assert "in_app_enabled" in sql
+    assert "deadline_reminders" in sql
+    assert "reminder_days_before" in sql
+    assert "0 <= all(reminder_days_before)" in sql
+    assert "365 >= all(reminder_days_before)" in sql
+
+
+def test_notifications_gain_safe_email_deduplication_fields():
+    sql = migration("0021_proactive_notifications.sql").lower()
+
+    assert "alter table public.notifications" in sql
+    assert "add column if not exists dedupe_key text" in sql
+    assert "add column if not exists emailed_at timestamptz" in sql
+    assert "create unique index if not exists notifications_dedupe_key_uidx" in sql
+    assert "where dedupe_key is not null" in sql
+
+
+def test_email_delivery_outbox_is_retryable_idempotent_and_service_owned():
+    sql = migration("0021_proactive_notifications.sql").lower()
+
+    assert "create table public.email_deliveries" in sql
+    for column in (
+        "notification_id",
+        "recipient_email",
+        "template_key",
+        "status",
+        "attempts",
+        "max_attempts",
+        "idempotency_key",
+        "next_attempt_at",
+        "provider_message_id",
+        "last_error",
+    ):
+        assert column in sql
+    assert "idempotency_key       text not null unique" in sql
+    assert "email_deliveries_retry_idx" in sql
+    assert "attempts < max_attempts" in sql
+    assert "alter table public.email_deliveries enable row level security" in sql
+    assert "revoke all on public.email_deliveries from anon, authenticated" in sql
+    assert "create policy email_deliveries" not in sql

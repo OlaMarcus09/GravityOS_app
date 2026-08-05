@@ -134,14 +134,14 @@ that bypassing FastAPI does not grant write access.
 
 ### Plans and gates
 
-| Capability | Free | Pro | Team |
-|---|---:|---:|---:|
-| Active projects | 1 | Unlimited | Unlimited |
-| Catalogue items | 25 | Unlimited | Unlimited |
-| Tasks and calendar | Yes | Yes | Yes |
-| Release planner writes | No | Yes | Yes |
-| Budget planner writes | No | Yes | Yes |
-| Marketing planner writes | No | Yes | Yes |
+| Capability | Free | Pro | Team | Enterprise |
+|---|---:|---:|---:|---:|
+| Active projects | 1 | Unlimited | Unlimited | Unlimited |
+| Catalogue items | 25 | Unlimited | Unlimited | Unlimited |
+| Tasks and calendar | Yes | Yes | Yes | Yes |
+| Release planner writes | No | Yes | Yes | Yes |
+| Budget planner writes | No | Yes | Yes | Yes |
+| Marketing planner writes | No | Yes | Yes | Yes |
 
 Plan limits are enforced in FastAPI. Reads for Pro surfaces remain available so
 the UI can render empty states and upgrade messaging, while mutations use the
@@ -200,6 +200,42 @@ their parent. Timestamped tables use `created_at` and `updated_at` conventions.
   recommendations, and release-plan suggestions. Retrieval exists; live
   generation does not.
 
+### Deferred Enterprise foundations
+
+Multi-workspace organizations are schema-ready for labels, agencies, and
+studios. `organizations` and `organization_members` model the organization and
+its roles, while `org_workspace_links` records workspace-owner-approved links.
+Organization members receive additive read-only RLS access to linked
+workspaces, projects, tasks, release plans, budgets, and Gravity Score
+snapshots. Existing workspace-member write policies are unchanged. The
+organization rollup UI, organization administration routes, SSO/SAML, billing,
+and organization audit logs are deferred.
+
+Soundcharts storage is also schema-ready. `artist_streaming_links` associates a
+workspace with a Soundcharts artist UUID, and `streaming_snapshots` stores
+timestamped platform metrics without requiring dashboard-time API calls. Every
+workspace member can read this data regardless of plan; workspace writers may
+manage artist links, while future service-role polling owns snapshot writes.
+The API contains credentials and a client for
+`GET /api/v2/artist/{uuid}/current/stats`, but no route calls it. Polling,
+historical audience and playlist endpoints, analytics UI, and Gravity Score
+integration are deferred.
+
+### Proactive notifications and email
+
+In-app notifications remain the source record for assignments, mentions, and
+approval events. `notification_preferences` lets each user independently enable
+email, in-app delivery, event categories, and the supported three-day, one-day,
+and due-date reminders. `email_deliveries` is a service-owned outbox with unique
+idempotency keys, provider identifiers, retry scheduling, and bounded attempts.
+
+The API queues email without blocking the primary task or comment mutation. A
+Render cron process runs `python -m app.jobs.notifications`, creates timezone-aware
+task reminders from profile timezones, and delivers pending messages through
+Resend. Supabase Custom SMTP separately owns signup, reset, confirmation, and
+workspace invitation email so invitations are not duplicated by the application
+outbox. Web Push, mobile push, weekly digests, and delivery webhooks are deferred.
+
 ### Relationship summary
 
 ```text
@@ -216,6 +252,11 @@ profiles --< workspace_members >-- workspaces
 workspaces --< catalogue_items
 workspaces --< gravity_scores
 workspaces --< ai_outputs
+organizations --< organization_members
+organizations --< org_workspace_links >-- workspaces
+workspaces --< artist_streaming_links --< streaming_snapshots
+profiles -- notification_preferences
+notifications --< email_deliveries
 ```
 
 ## 5. API Architecture
@@ -469,6 +510,9 @@ SUPABASE_SERVICE_ROLE_KEY
 SUPABASE_JWT_SECRET                # required for legacy HS256 projects
 SUPABASE_JWT_AUD
 CORS_ORIGINS
+RESEND_API_KEY
+EMAIL_FROM
+EMAIL_REPLY_TO
 ENVIRONMENT
 STRIPE_SECRET_KEY                  # reserved/partial
 STRIPE_WEBHOOK_SECRET              # reserved/partial
@@ -530,7 +574,13 @@ These items describe the current engineering boundary, not completed behavior:
    verification, and automatic plan lifecycle do not.
 9. **AI Manager:** only the storage and retrieval contract exists; there is no LLM
    orchestration, scheduled generation, prompt/version tracking, or cost control.
-10. **Operational readiness:** observability, structured logging, rate limiting,
+10. **Enterprise organizations:** the schema and read-only linked-workspace RLS
+    exist, but rollup UI, organization admin routes, SSO/SAML, billing, and audit
+    logs are deferred.
+11. **Soundcharts analytics:** identity links, snapshot storage, settings, and the
+    current-stats client exist. Polling, analytics UI, paid-endpoint selection,
+    and Gravity Score integration are deferred. Access is not plan-gated yet.
+12. **Operational readiness:** observability, structured logging, rate limiting,
     backups/restore drills, production smoke tests, and documented incident
     procedures are not yet represented in the repository.
 

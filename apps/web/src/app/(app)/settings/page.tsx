@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import { useMe, useProfileMutation } from "@/lib/queries/useMe";
 import { useInvitationMutations, usePendingInvitations, useWorkspaceInvitations } from "@/lib/queries/useInvitations";
 import { useWorkspace } from "@/lib/workspace";
+import type { NotificationPreferencesUpdate } from "@/lib/api";
+import { useNotificationPreferences, useNotificationPreferencesMutation } from "@/lib/queries/useNotifications";
 import { Badge, Button, Card, ErrorText, Field, Input, PageHeader, Select } from "@/components/ui";
 
 const CREATIVE_ROLES = [
@@ -67,6 +69,9 @@ export default function SettingsPage() {
   const pending = usePendingInvitations();
   const workspaceInvites = useWorkspaceInvitations(workspaceId);
   const invitations = useInvitationMutations(workspaceId);
+  const notificationPreferences = useNotificationPreferences();
+  const saveNotificationPreferences = useNotificationPreferencesMutation();
+  const [preferences, setPreferences] = useState<NotificationPreferencesUpdate | null>(null);
 
   // Seed form from server data
   useEffect(() => {
@@ -76,6 +81,13 @@ export default function SettingsPage() {
       setTimezone(me.profile.timezone ?? "");
     }
   }, [me?.profile]);
+
+  useEffect(() => {
+    if (notificationPreferences.data) {
+      const { user_id: _userId, ...editable } = notificationPreferences.data;
+      setPreferences(editable);
+    }
+  }, [notificationPreferences.data]);
 
   const dirty =
     displayName !== (me?.profile?.display_name ?? "") ||
@@ -165,6 +177,65 @@ export default function SettingsPage() {
             {saved && <span style={{ fontSize: "0.82rem", color: "var(--success)" }}>Saved</span>}
           </div>
         </div>
+      </Card>
+
+      <Card style={{ padding: "1.5rem", marginBottom: "1.5rem" }}>
+        <span className="eyebrow">Notifications</span>
+        <p style={{ color: "var(--muted)", fontSize: "0.85rem" }}>
+          Choose how Gravity OS keeps you ahead of assignments, reviews, and deadlines.
+        </p>
+        {notificationPreferences.isLoading || !preferences ? (
+          <p style={{ color: "var(--muted-2)", fontSize: "0.82rem" }}>Loading preferences…</p>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem" }}>
+            {([
+              ["email_enabled", "Email notifications", "Receive enabled alerts by email."],
+              ["in_app_enabled", "In-app notifications", "Show enabled alerts in the notification bell."],
+              ["task_assignments", "Task assignments", "When a task is assigned to you."],
+              ["mentions", "Mentions", "When someone mentions you in a comment."],
+              ["approval_updates", "Approval updates", "Review requests, approvals, and rejections."],
+              ["deadline_reminders", "Deadline reminders", "Reminders before tasks become due."],
+            ] as const).map(([key, label, description]) => (
+              <label key={key} style={{ display: "flex", alignItems: "flex-start", gap: "0.7rem", cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={preferences[key]}
+                  onChange={(event) => setPreferences({ ...preferences, [key]: event.target.checked })}
+                  style={{ marginTop: "0.2rem" }}
+                />
+                <span><strong style={{ display: "block", fontSize: "0.86rem" }}>{label}</strong><small style={{ color: "var(--muted-2)" }}>{description}</small></span>
+              </label>
+            ))}
+            <Field label="Deadline reminder schedule">
+              <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+                {([[3, "3 days before"], [1, "1 day before"], [0, "Due date"]] as const).map(([day, label]) => (
+                  <label key={day} style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem", cursor: "pointer", fontSize: "0.84rem" }}>
+                    <input
+                      type="checkbox"
+                      checked={preferences.reminder_days_before.includes(day)}
+                      onChange={(event) => {
+                        const next = event.target.checked
+                          ? [...preferences.reminder_days_before, day]
+                          : preferences.reminder_days_before.filter((value) => value !== day);
+                        setPreferences({ ...preferences, reminder_days_before: [...new Set(next)].sort((a, b) => b - a) });
+                      }}
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </Field>
+            <ErrorText error={notificationPreferences.error ?? saveNotificationPreferences.error} />
+            <div>
+              <Button
+                onClick={() => preferences.reminder_days_before.length > 0 && saveNotificationPreferences.mutate(preferences)}
+                disabled={saveNotificationPreferences.isPending || preferences.reminder_days_before.length === 0}
+              >
+                {saveNotificationPreferences.isPending ? "Saving…" : "Save notification preferences"}
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* Plan & Billing */}

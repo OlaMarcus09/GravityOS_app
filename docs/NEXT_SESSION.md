@@ -1,6 +1,6 @@
 # Next session handoff
 
-Last updated: 2026-08-04
+Last updated: 2026-08-05
 
 ## Repository
 
@@ -9,9 +9,9 @@ Last updated: 2026-08-04
 - Push product work to the `app` remote, not `origin`.
 - Do not add co-author metadata to commits.
 - GitHub `main` is the product/deployment branch; `app/master` is stale.
-- Latest product commit: `e8146da feat: harden responsive onboarding experience`.
-- `e8146da` is pushed to `GravityOS_app/main` and contains the responsive shell,
-  mobile calendar/modal work, onboarding fixes, and Playwright setup.
+- Latest pushed commit: `6bf63e5 docs: update pilot session handoff`.
+- Deferred Enterprise foundation work is currently validated locally but remains
+  uncommitted and unapplied to Supabase.
 
 ## Product direction
 
@@ -45,6 +45,9 @@ comments, approval control, notifications, and an accountable activity history.
 - `0016_task_approvals.sql`
 - `0017_team_workflow_integrity.sql`
 - `0018_task_approval_completion.sql`
+- `0019_enterprise_plan.sql` (local only)
+- `0020_enterprise_foundations.sql` (local only)
+- `0021_proactive_notifications.sql` (local only)
 
 Migrations `0015`, `0016`, and `0017` have been applied in the active Supabase
 project. `0017` protects approval columns from direct PostgREST writes, adds
@@ -56,11 +59,20 @@ Migration `0018` was applied to the active Supabase project on 2026-08-02. It
 makes approval atomically complete the task, reopens rejected tasks for
 corrections, and protects reviewed-task history from deletion.
 
+Migrations `0019`, `0020`, and `0021` are ready locally but have not been applied. They
+add the reserved Enterprise enum value, organization membership and owner-opt-in
+workspace links, read-only organization access to six approved workspace tables,
+Soundcharts identity/snapshot storage, notification preferences, and a
+service-owned email outbox. Soundcharts reads are available to every direct
+workspace member regardless of plan; plan gating is deferred.
+
 ## Validation
 
-- API suite: 103 tests passed.
+- API suite: 132 tests passed.
 - Frontend typecheck passed after the responsive/onboarding changes.
-- Frontend production build passed on Next.js `14.2.35`.
+- Frontend production build compiled, validated types, and generated all 20 routes
+  on Next.js `14.2.35`; the local process required interruption after printing the
+  completed route manifest during trace shutdown.
 - `git diff --check` passed.
 - Playwright smoke coverage is configured for desktop Chrome, iPhone-sized, and
   iPad-sized viewports. The local macOS 11 machine cannot launch current bundled
@@ -87,16 +99,16 @@ corrections, and protects reviewed-task history from deletion.
 ## Deployment configuration
 
 - Render API has `SUPER_ADMIN_EMAILS` configured with the verified platform admin email.
-- Production deployment was previously verified on 2026-08-02 for earlier commits.
-  The `e8146da` deployment still needs confirmation in Render and Vercel.
+- The custom domain is live at `https://www.gravityos.tech`; the apex redirects
+  to `www`. Render health reports `production`, and CORS is verified for both
+  custom-domain origins.
 - Before the next external demo, still run the API `/health`, production CORS,
   invitation-link, and browser network checks against the live URLs.
 - Vercel should use the `apps/web` project root and point
   `NEXT_PUBLIC_API_URL` at the deployed Render origin. Deployment status is now
   confirmed in the hosting dashboards.
 - The local `apps/web/.env` still points at `http://localhost:8000`; do not treat
-  local health failures as production failures. The hosted Vercel hostname was
-  unreachable from this environment, so use the current dashboard URL next session.
+  local health failures as production failures.
 - Confirm the deployed web build includes the Admin account support and Plan audit sections.
 - The guided Team demo setup and pitch flow are in [docs/DEMO.md](DEMO.md).
 
@@ -104,17 +116,25 @@ corrections, and protects reviewed-task history from deletion.
 
 Start the next session here:
 
-1. Confirm Render and Vercel deploy `e8146da`, then run API health, production CORS,
+1. Review the local Enterprise and proactive-notification diff, then commit and
+   push it to `app/main` when approved. Apply migrations `0019`, `0020`, then
+   `0021` to Supabase only with explicit production authorization.
+2. Create or sync the `gravity-os-notifications` Render cron service and add its
+   own `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, and
+   `EMAIL_REPLY_TO` values. Cron services do not inherit the web service secrets.
+3. Confirm Render and Vercel deploy the resulting commit, then run API health, production CORS,
    invitation-link, and browser network checks against the actual dashboard URLs.
-2. Live-test that approval marks a task `Approved · Completed`, while rejection
+4. Send a disposable-account assignment, mention, approval, and due-date reminder;
+   confirm one in-app record and one professional email for each enabled event.
+5. Live-test that approval marks a task `Approved · Completed`, while rejection
    reopens it for editing/resubmission and retains the decision history.
-3. Run a live two-workspace isolation check and confirm platform-admin support and
+6. Run a live two-workspace isolation check and confirm platform-admin support and
    plan-audit sections in production.
-4. Seed and rehearse the guided demo workspace for artist managers and label owners.
-5. On a current device/browser, verify laptop 1440×900 and 1280×800, iPad portrait
+7. Seed and rehearse the guided demo workspace for artist managers and label owners.
+8. On a current device/browser, verify laptop 1440×900 and 1280×800, iPad portrait
    and landscape, and mobile Safari/Chrome. Use a disposable email to rehearse the
    owner → Admin invitation flow before inviting the artist's real assistant.
-6. If production is green, run the complete pilot rehearsal: Owner creates task →
+9. If production is green, run the complete pilot rehearsal: Owner creates task →
    team member submits → Admin reviews → approval completes the task, while
    rejection reopens it for correction and resubmission.
 

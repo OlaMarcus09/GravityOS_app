@@ -33,3 +33,32 @@ services:
         sync: false
       - key: SUPER_ADMIN_EMAILS
         sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        value: Gravity OS <notifications@gravityos.tech>
+      - key: EMAIL_REPLY_TO
+        sync: false
+
+  - type: cron
+    name: gravity-os-notifications
+    runtime: docker
+    schedule: "*/5 * * * *"
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: ./apps/api
+    dockerCommand: python -m app.jobs.notifications
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        value: Gravity OS <notifications@gravityos.tech>
+      - key: EMAIL_REPLY_TO
+        sync: false
+      - key: WEB_APP_URL
+        value: https://www.gravityos.tech
+      - key: ENVIRONMENT
+        value: production

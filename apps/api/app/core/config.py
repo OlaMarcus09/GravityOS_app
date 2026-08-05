@@ -28,6 +28,13 @@ class Settings(BaseSettings):
     # Stripe (placeholder until keys are configured)
     stripe_secret_key: str = Field(default="", alias="STRIPE_SECRET_KEY")
     stripe_webhook_secret: str = Field(default="", alias="STRIPE_WEBHOOK_SECRET")
+    soundcharts_app_id: str = Field(default="", alias="SOUNDCHARTS_APP_ID")
+    soundcharts_api_key: str = Field(default="", alias="SOUNDCHARTS_API_KEY")
+    resend_api_key: str = Field(default="", alias="RESEND_API_KEY")
+    email_from: str = Field(
+        default="Gravity OS <notifications@gravityos.tech>", alias="EMAIL_FROM"
+    )
+    email_reply_to: str = Field(default="", alias="EMAIL_REPLY_TO")
     super_admin_emails: str = Field(default="", alias="SUPER_ADMIN_EMAILS")
     web_app_url: str = Field(default="http://localhost:3000", alias="WEB_APP_URL")
 

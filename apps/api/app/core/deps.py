@@ -23,6 +23,7 @@ PLAN_LIMITS: dict[str, dict[str, int | None]] = {
     "free": {"active_projects": 1, "catalogue_items": 25},
     "pro":  {"active_projects": None, "catalogue_items": None},   # unlimited
     "team": {"active_projects": None, "catalogue_items": None},
+    "enterprise": {"active_projects": None, "catalogue_items": None},
 }
 
 

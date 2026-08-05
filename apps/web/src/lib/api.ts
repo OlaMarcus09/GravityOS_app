@@ -201,11 +201,27 @@ export type NotificationResponse = {
   unread_count: number;
 };
 
+export type NotificationPreferences = {
+  user_id: string;
+  email_enabled: boolean;
+  in_app_enabled: boolean;
+  task_assignments: boolean;
+  mentions: boolean;
+  approval_updates: boolean;
+  deadline_reminders: boolean;
+  reminder_days_before: number[];
+};
+
+export type NotificationPreferencesUpdate = Omit<NotificationPreferences, "user_id">;
+
 export const notificationsApi = {
   list: (limit = 30) => apiFetch<NotificationResponse>(`/notifications?limit=${limit}`),
   markRead: (id: string) => apiFetch<AppNotification>(`/notifications/${id}/read`, { method: "PATCH" }),
   markAllRead: () => apiFetch<void>("/notifications/read-all", { method: "POST" }),
   dismiss: (id: string) => apiFetch<void>(`/notifications/${id}`, { method: "DELETE" }),
+  preferences: () => apiFetch<NotificationPreferences>("/notifications/preferences"),
+  updatePreferences: (body: NotificationPreferencesUpdate) =>
+    apiFetch<NotificationPreferences>("/notifications/preferences", { method: "PUT", body }),
 };
 
 // --- Collaboration ---------------------------------------------------------

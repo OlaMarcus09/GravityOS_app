@@ -12,6 +12,7 @@ from app.core.db import get_service_client
 from app.core.deps import WorkspaceContext, get_workspace_context, require_writer
 from app.core.rate_limit import check_rate_limit
 from app.schemas.collaboration import ActivityEventType, CommentCreate
+from app.services.notifications import create_notification
 
 router = APIRouter(prefix="/collaboration", tags=["collaboration"])
 
@@ -108,25 +109,24 @@ def _notify_mentions(ctx: WorkspaceContext, body: str, comment: dict, target: di
             f"/{'projects' if comment['target_type'] == 'project' else 'tasks'}"
             f"?comments={comment['target_id']}"
         )
-        notifications = [
-            {
-                "workspace_id": ctx.workspace_id,
-                "recipient_id": member["user_id"],
-                "kind": "comment_mention",
-                "title": "You were mentioned in a comment",
-                "message": f"You were mentioned on {target['title']}.",
-                "action_url": action_url,
-                "metadata": {
+        for member in members:
+            recipient_id = member["user_id"]
+            create_notification(
+                workspace_id=ctx.workspace_id,
+                recipient_id=recipient_id,
+                kind="comment_mention",
+                title="You were mentioned in a comment",
+                message=f"You were mentioned on {target['title']}.",
+                action_url=action_url,
+                metadata={
                     "comment_id": comment["id"],
                     "target_type": comment["target_type"],
                     "target_id": comment["target_id"],
                     "mentioned_by": ctx.auth.user_id,
                 },
-            }
-            for member in members
-        ]
-        if notifications:
-            service.table("notifications").insert(notifications).execute()
+                dedupe_key=f"comment-mention:{comment['id']}:{recipient_id}",
+                service=service,
+            )
     except Exception:
         # Mentions are best-effort and must not fail the saved comment.
         return

@@ -1,7 +1,6 @@
 """Tasks routes (ARCHITECTURE.md section 3)."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -10,6 +9,7 @@ from app.core.db import get_service_client
 from app.core.deps import WorkspaceContext, get_workspace_context, require_writer
 from app.core.tenant_refs import validate_project_reference
 from app.schemas.tasks import TaskCreate, TaskUpdate
+from app.services.notifications import create_notification
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -40,22 +40,25 @@ def _notify_assignee(ctx: WorkspaceContext, task: dict) -> None:
     if not assignee_id:
         return
     try:
-        get_service_client().table("notifications").insert({
-            "workspace_id": ctx.workspace_id,
-            "recipient_id": assignee_id,
-            "kind": "task_assigned",
-            "title": "Task assigned to you",
-            "message": f'You were assigned to "{task["title"]}".',
-            "action_url": "/tasks",
-            "metadata": {
-                "task_id": task["id"],
-                "project_id": task.get("project_id"),
-                "assigned_by": ctx.auth.user_id,
-            },
-        }).execute()
+        service = get_service_client()
     except Exception:
-        # Notification delivery must not roll back the task mutation.
         return
+    assignment_version = task.get("updated_at") or task.get("created_at") or "created"
+    create_notification(
+        workspace_id=ctx.workspace_id,
+        recipient_id=assignee_id,
+        kind="task_assigned",
+        title="Task assigned to you",
+        message=f'You were assigned to "{task["title"]}".',
+        action_url="/tasks",
+        metadata={
+            "task_id": task["id"],
+            "project_id": task.get("project_id"),
+            "assigned_by": ctx.auth.user_id,
+        },
+        dedupe_key=f"task-assigned:{task['id']}:{assignee_id}:{assignment_version}",
+        service=service,
+    )
 
 
 def _record_activity(ctx: WorkspaceContext, task: dict, kind: str) -> None:
@@ -100,19 +103,19 @@ def _notify_approval(ctx: WorkspaceContext, task: dict, event: str) -> None:
                 else f'"{task["title"]}" was rejected and reopened for changes.'
             )
             kind = f"task_{event}"
-        if recipient_ids:
-            service.table("notifications").insert([
-                {
-                    "workspace_id": ctx.workspace_id,
-                    "recipient_id": recipient_id,
-                    "kind": kind,
-                    "title": title,
-                    "message": message,
-                    "action_url": "/tasks",
-                    "metadata": {"task_id": task["id"], "actor_id": ctx.auth.user_id},
-                }
-                for recipient_id in recipient_ids
-            ]).execute()
+        event_version = task.get("approval_reviewed_at") or task.get("updated_at") or event
+        for recipient_id in recipient_ids:
+            create_notification(
+                workspace_id=ctx.workspace_id,
+                recipient_id=recipient_id,
+                kind=kind,
+                title=title,
+                message=message,
+                action_url="/tasks",
+                metadata={"task_id": task["id"], "actor_id": ctx.auth.user_id},
+                dedupe_key=f"task-approval:{event}:{task['id']}:{recipient_id}:{event_version}",
+                service=service,
+            )
     except Exception:
         return
 
@@ -241,8 +244,13 @@ def submit_task_for_approval(
         updated = ctx.db.rpc("submit_task_for_approval", {"p_task_id": task_id}).execute().data
     except Exception as exc:
         raise HTTPException(status_code=403, detail={"error": {"code": "approval_submit_failed", "message": str(exc)}}) from exc
-    if isinstance(updated, list): updated = updated[0] if updated else None
-    if not updated: raise HTTPException(status_code=404, detail={"error": {"code": "not_found", "message": "task not found"}})
+    if isinstance(updated, list):
+        updated = updated[0] if updated else None
+    if not updated:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": {"code": "not_found", "message": "task not found"}},
+        )
     _record_activity(ctx, updated, "task_submitted_for_approval")
     _notify_approval(ctx, updated, "submitted")
     return updated
@@ -256,8 +264,18 @@ def _review_task(task_id: str, decision: str, note: Optional[str], ctx: Workspac
         updated = ctx.db.rpc("review_task_approval", {"p_task_id": task_id, "p_decision": decision, "p_note": note}).execute().data
     except Exception as exc:
         raise HTTPException(status_code=409, detail={"error": {"code": "approval_review_failed", "message": str(exc)}}) from exc
-    if isinstance(updated, list): updated = updated[0] if updated else None
-    if not updated: raise HTTPException(status_code=409, detail={"error": {"code": "approval_review_failed", "message": "Task review failed"}})
+    if isinstance(updated, list):
+        updated = updated[0] if updated else None
+    if not updated:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": {
+                    "code": "approval_review_failed",
+                    "message": "Task review failed",
+                }
+            },
+        )
     _record_activity(ctx, updated, f"task_{decision}")
     if decision == "approved":
         _record_activity(ctx, updated, "task_completed")
