@@ -10,6 +10,7 @@ from fastapi import HTTPException
 from app.core.auth import AuthContext
 from app.core.deps import WorkspaceContext
 from app.routers.streaming import (
+    _enforce_sync_cooldown,
     _snapshot_rows,
     get_artist_link,
     get_streaming_summary,
@@ -62,6 +63,33 @@ def test_get_artist_link_returns_none_when_workspace_has_not_connected_one() -> 
     db.table.return_value = _query([])
 
     assert get_artist_link(_context(db)) is None
+
+
+def test_sync_cooldown_blocks_recent_workspace_snapshot() -> None:
+    db = Mock()
+    db.table.return_value = _query([{"captured_at": "2026-08-06T12:00:00Z"}])
+
+    with pytest.raises(HTTPException) as exc_info:
+        _enforce_sync_cooldown(
+            _context(db),
+            "link-1",
+            datetime(2026, 8, 6, 12, 5, tzinfo=timezone.utc),
+        )
+
+    assert exc_info.value.status_code == 429
+    assert exc_info.value.detail["error"]["code"] == "sync_cooldown"
+    assert exc_info.value.headers["Retry-After"] == "600"
+
+
+def test_sync_cooldown_allows_old_workspace_snapshot() -> None:
+    db = Mock()
+    db.table.return_value = _query([{"captured_at": "2026-08-06T11:00:00Z"}])
+
+    _enforce_sync_cooldown(
+        _context(db),
+        "link-1",
+        datetime(2026, 8, 6, 12, 5, tzinfo=timezone.utc),
+    )
 
 
 def test_sync_artist_stats_persists_service_owned_snapshots() -> None:

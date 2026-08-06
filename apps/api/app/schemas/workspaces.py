@@ -3,21 +3,25 @@ from __future__ import annotations
 import re
 from typing import Literal, Optional
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class WorkspaceCreate(BaseModel):
-    name: str
-    type: str = "personal"
+    name: str = Field(min_length=1, max_length=120)
+    type: str = Field(default="personal", min_length=1, max_length=30)
+
+    model_config = {"str_strip_whitespace": True}
 
 
 class WorkspaceUpdate(BaseModel):
-    name: Optional[str] = None
-    type: Optional[str] = None
+    name: Optional[str] = Field(default=None, min_length=1, max_length=120)
+    type: Optional[str] = Field(default=None, min_length=1, max_length=30)
+
+    model_config = {"str_strip_whitespace": True}
 
 
 class MemberInvite(BaseModel):
-    email: str
+    email: str = Field(max_length=320)
     role: Literal["admin", "member", "viewer"] = "member"
 
     @field_validator("email")

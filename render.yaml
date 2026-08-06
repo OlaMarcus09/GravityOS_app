@@ -7,7 +7,7 @@ services:
     runtime: docker
     dockerfilePath: ./apps/api/Dockerfile
     dockerContext: ./apps/api
-    healthCheckPath: /health
+    healthCheckPath: /health/ready
     plan: starter
     autoDeploy: true
     envVars:

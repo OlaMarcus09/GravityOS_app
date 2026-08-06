@@ -19,8 +19,8 @@ jobs:
           NOTIFICATION_CRON_SECRET: ${{ secrets.NOTIFICATION_CRON_SECRET }}
         run: |
           if [ -z "${NOTIFICATION_CRON_SECRET}" ]; then
-            echo "NOTIFICATION_CRON_SECRET is not configured; skipping."
-            exit 0
+            echo "NOTIFICATION_CRON_SECRET is not configured."
+            exit 1
           fi
           curl --fail-with-body --silent --show-error \
             --retry 2 --max-time 240 \

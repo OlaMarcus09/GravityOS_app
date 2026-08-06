@@ -5,11 +5,12 @@ from unittest.mock import Mock, patch
 
 import pytest
 from fastapi import HTTPException
+from pydantic import ValidationError
 
 from app.core.auth import AuthContext
 from app.core.deps import WorkspaceContext
 from app.routers.catalogue import create_catalogue_item, delete_catalogue_item
-from app.schemas.catalogue import CatalogueItemCreate
+from app.schemas.catalogue import MAX_CATALOGUE_FILE_SIZE, CatalogueItemCreate
 
 
 def workspace_context(db: Mock) -> WorkspaceContext:
@@ -54,6 +55,24 @@ def test_create_uses_unique_workspace_scoped_storage_paths() -> None:
     assert first_path != second_path
     assert first["upload_url"] == "https://upload.test"
     assert second["upload_url"] == "https://upload.test"
+
+
+def test_catalogue_create_rejects_oversized_declared_upload() -> None:
+    with pytest.raises(ValidationError):
+        CatalogueItemCreate(
+            title="Oversized master",
+            kind="audio",
+            file_size=MAX_CATALOGUE_FILE_SIZE + 1,
+        )
+
+
+def test_catalogue_create_bounds_metadata() -> None:
+    with pytest.raises(ValidationError):
+        CatalogueItemCreate(title="", kind="audio")
+    with pytest.raises(ValidationError):
+        CatalogueItemCreate(title="Track", kind="audio", bpm=401)
+    with pytest.raises(ValidationError):
+        CatalogueItemCreate(title="Track", kind="audio", tags=["tag"] * 51)
 
 
 def test_delete_removes_storage_object_before_metadata() -> None:

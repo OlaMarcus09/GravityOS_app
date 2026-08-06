@@ -4,25 +4,29 @@ from datetime import date
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ProjectCreate(BaseModel):
-    title: str
-    type: str = "single"
-    status: str = "idea"
-    cover_url: Optional[str] = None
+    title: str = Field(min_length=1, max_length=200)
+    type: str = Field(default="single", min_length=1, max_length=30)
+    status: str = Field(default="idea", min_length=1, max_length=30)
+    cover_url: Optional[str] = Field(default=None, max_length=2048)
     target_release_date: Optional[date] = None
-    description: Optional[str] = None
+    description: Optional[str] = Field(default=None, max_length=10000)
+
+    model_config = {"str_strip_whitespace": True}
 
 
 class ProjectUpdate(BaseModel):
-    title: Optional[str] = None
-    type: Optional[str] = None
-    status: Optional[str] = None
-    cover_url: Optional[str] = None
+    title: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    type: Optional[str] = Field(default=None, min_length=1, max_length=30)
+    status: Optional[str] = Field(default=None, min_length=1, max_length=30)
+    cover_url: Optional[str] = Field(default=None, max_length=2048)
     target_release_date: Optional[date] = None
-    description: Optional[str] = None
+    description: Optional[str] = Field(default=None, max_length=10000)
+
+    model_config = {"str_strip_whitespace": True}
 
 
 class ProjectOut(BaseModel):

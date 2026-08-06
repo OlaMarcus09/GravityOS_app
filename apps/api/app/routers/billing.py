@@ -5,7 +5,7 @@ STRIPE_SECRET_KEY is set, they create real Stripe sessions.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.core.config import get_settings
 from app.core.deps import WorkspaceContext, require_writer
@@ -44,14 +44,16 @@ def billing_portal(
 
 
 @router.post("/webhook")
-async def stripe_webhook(request: Request) -> dict:
+async def stripe_webhook() -> dict:
     """Receive Stripe webhook events (subscription updates, payments)."""
-    settings = get_settings()
-    if not settings.stripe_webhook_secret:
-        raise HTTPException(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail={"error": {"code": "stripe_not_configured", "message": "Stripe webhook secret not set"}},
-        )
-    # TODO: verify signature, handle checkout.session.completed,
-    # customer.subscription.updated, customer.subscription.deleted
-    return {"received": True}
+    # Fail closed until signature verification and event handling are shipped.
+    # Configuring a secret alone must never make this endpoint accept events.
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail={
+            "error": {
+                "code": "stripe_webhook_not_implemented",
+                "message": "Stripe webhook processing is not enabled yet",
+            }
+        },
+    )

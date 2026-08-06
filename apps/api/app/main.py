@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import get_settings
+from app.core.db import get_service_client
 from app.jobs.notifications import run_notification_cycle
 from app.routers import (
     billing,
@@ -91,6 +92,40 @@ def create_app() -> FastAPI:
     @app.get("/health", tags=["health"])
     def health() -> dict:
         return {"status": "ok", "environment": settings.environment}
+
+    @app.get("/health/ready", tags=["health"])
+    def readiness() -> dict:
+        """Confirm the API can reach its primary datastore before serving traffic."""
+        required = {
+            "SUPABASE_URL": settings.supabase_url,
+            "SUPABASE_ANON_KEY": settings.supabase_anon_key,
+            "SUPABASE_SERVICE_ROLE_KEY": settings.supabase_service_role_key,
+        }
+        missing = [name for name, value in required.items() if not value]
+        if missing:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail={
+                    "error": {
+                        "code": "configuration_incomplete",
+                        "message": "Required backend configuration is missing",
+                        "details": {"missing": missing},
+                    }
+                },
+            )
+        try:
+            get_service_client().table("workspaces").select("id").limit(1).execute()
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail={
+                    "error": {
+                        "code": "database_unavailable",
+                        "message": "Primary datastore is unavailable",
+                    }
+                },
+            ) from exc
+        return {"status": "ready", "environment": settings.environment}
 
     @app.post("/internal/notifications/run", include_in_schema=False)
     def run_notifications(

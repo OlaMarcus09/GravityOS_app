@@ -18,6 +18,7 @@ from app.core.deps import (
     get_workspace_context,
     require_writer,
 )
+from app.core.rate_limit import check_rate_limit
 from app.core.tenant_refs import validate_project_reference
 from app.schemas.catalogue import CatalogueItemCreate, CatalogueItemUpdate
 
@@ -61,6 +62,13 @@ def create_catalogue_item(
     body: CatalogueItemCreate,
     ctx: WorkspaceContext = Depends(enforce_plan_limit("catalogue_items")),
 ) -> dict:
+    # Signed upload URLs are cheap to mint but can still be abused to create
+    # storage churn. Keep a per-user burst limit in addition to plan item caps.
+    check_rate_limit(
+        f"catalogue:create:{ctx.workspace_id}:{ctx.auth.user_id}",
+        limit=60,
+        window_seconds=3600,
+    )
     limit = PLAN_LIMITS.get(ctx.plan, {}).get("catalogue_items")
     if limit is not None:
         count_res = ctx.db.table("catalogue_items").select("id", count="exact").eq("workspace_id", ctx.workspace_id).execute()

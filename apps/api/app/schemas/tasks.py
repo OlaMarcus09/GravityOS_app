@@ -4,28 +4,32 @@ from datetime import date, datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class TaskCreate(BaseModel):
-    title: str
+    title: str = Field(min_length=1, max_length=300)
     project_id: Optional[UUID] = None
-    description: Optional[str] = None
-    status: str = "todo"
-    priority: str = "medium"
+    description: Optional[str] = Field(default=None, max_length=10000)
+    status: str = Field(default="todo", min_length=1, max_length=30)
+    priority: str = Field(default="medium", min_length=1, max_length=20)
     due_date: Optional[date] = None
     assignee_id: Optional[UUID] = None
+
+    model_config = {"str_strip_whitespace": True}
 
 
 class TaskUpdate(BaseModel):
-    title: Optional[str] = None
+    title: Optional[str] = Field(default=None, min_length=1, max_length=300)
     project_id: Optional[UUID] = None
-    description: Optional[str] = None
-    status: Optional[str] = None
-    priority: Optional[str] = None
+    description: Optional[str] = Field(default=None, max_length=10000)
+    status: Optional[str] = Field(default=None, min_length=1, max_length=30)
+    priority: Optional[str] = Field(default=None, min_length=1, max_length=20)
     due_date: Optional[date] = None
     assignee_id: Optional[UUID] = None
     completed_at: Optional[datetime] = None
+
+    model_config = {"str_strip_whitespace": True}
 
 
 class TaskOut(BaseModel):

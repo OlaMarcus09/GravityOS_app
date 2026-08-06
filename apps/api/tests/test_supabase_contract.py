@@ -219,6 +219,32 @@ def test_proactive_notification_preferences_are_owned_by_each_user():
     assert "365 >= all(reminder_days_before)" in sql
 
 
+def test_plan_limits_are_enforced_at_database_boundary():
+    sql = migration("0022_plan_enforcement.sql").lower()
+
+    assert "create or replace function private.is_paid_workspace(ws uuid)" in sql
+    assert "grant execute on function private.is_paid_workspace(uuid) to authenticated, service_role" in sql
+    assert "create policy workspaces_insert_authed" in sql
+    assert "plan = 'free'" in sql
+    assert "prevent_client_plan_change" in sql
+    assert "new.owner_id is distinct from old.owner_id" in sql
+    assert "enforce_free_project_limit" in sql
+    assert "pg_advisory_xact_lock" in sql
+    assert "free plan allows 1 active project" in sql
+    assert "enforce_free_catalogue_limit" in sql
+    assert "free plan allows 25 catalogue items" in sql
+    for policy in (
+        "release_plans_insert",
+        "milestones_insert",
+        "budgets_insert",
+        "budget_items_insert",
+        "campaigns_insert",
+        "content_insert",
+    ):
+        assert f"create policy {policy}" in sql
+    assert "private.is_paid_workspace(workspace_id)" in sql
+
+
 def test_notifications_gain_safe_email_deduplication_fields():
     sql = migration("0021_proactive_notifications.sql").lower()
 

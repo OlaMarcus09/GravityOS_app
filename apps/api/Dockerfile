@@ -14,6 +14,11 @@ RUN pip install --upgrade pip && pip install .
 # App source.
 COPY app ./app
 
+# Do not run the web process as root in production.
+RUN addgroup --system gravity && adduser --system --ingroup gravity gravity \
+    && chown -R gravity:gravity /app
+USER gravity
+
 # Render provides $PORT at runtime.
 ENV PORT=8000
 EXPOSE 8000

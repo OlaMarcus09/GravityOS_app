@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from numbers import Real
 from typing import Any
 
@@ -9,12 +9,52 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.db import get_service_client
 from app.core.deps import WorkspaceContext, get_workspace_context, require_writer
+from app.core.rate_limit import check_rate_limit
 from app.integrations.soundcharts import SoundchartsClient, SoundchartsNotConfiguredError
 from app.schemas.streaming import ArtistStreamingLinkCreate
 
 router = APIRouter(prefix="/streaming", tags=["streaming"])
 
 _STAT_GROUPS = ("social", "streaming", "popularity", "retention", "score")
+_SYNC_COOLDOWN = timedelta(minutes=15)
+
+
+def _enforce_sync_cooldown(ctx: WorkspaceContext, link_id: str, now: datetime) -> None:
+    """Avoid repeatedly invoking Soundcharts for the same workspace/link.
+
+    Snapshots are persisted in Supabase, so this guard works across API
+    instances (and survives process restarts). It intentionally uses the
+    latest captured timestamp rather than an in-memory limiter.
+    """
+    rows = (
+        ctx.db.table("streaming_snapshots")
+        .select("captured_at")
+        .eq("workspace_id", ctx.workspace_id)
+        .eq("artist_link_id", link_id)
+        .order("captured_at", desc=True)
+        .limit(1)
+        .execute()
+        .data
+        or []
+    )
+    if not rows:
+        return
+    raw = rows[0].get("captured_at")
+    if not isinstance(raw, str):
+        return
+    try:
+        captured = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        if captured.tzinfo is None:
+            captured = captured.replace(tzinfo=timezone.utc)
+    except ValueError:
+        return
+    if now - captured < _SYNC_COOLDOWN:
+        retry_after = max(1, int((_SYNC_COOLDOWN - (now - captured)).total_seconds()))
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            headers={"Retry-After": str(retry_after)},
+            detail={"error": {"code": "sync_cooldown", "message": "Soundcharts sync is available again shortly"}},
+        )
 
 
 def _link_or_404(ctx: WorkspaceContext, link_id: str) -> dict[str, Any]:
@@ -151,6 +191,12 @@ def sync_artist_stats(
 ) -> dict[str, Any]:
     link = _link_or_404(ctx, link_id)
     synced_at = datetime.now(timezone.utc)
+    check_rate_limit(
+        f"soundcharts:sync:{ctx.workspace_id}:{ctx.auth.user_id}",
+        limit=4,
+        window_seconds=900,
+    )
+    _enforce_sync_cooldown(ctx, link_id, synced_at)
     try:
         with SoundchartsClient() as client:
             payload = client.get_artist_stats(str(link["soundcharts_uuid"]), period_days=7)
