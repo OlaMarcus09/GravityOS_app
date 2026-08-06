@@ -64,6 +64,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return localStorage.getItem(SIDEBAR_KEY) === "1";
   });
   const [tabletCompact, setTabletCompact] = useState(false);
+  const [mobileLayout, setMobileLayout] = useState(false);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const { memberships, workspaceId, setWorkspaceId } = useWorkspace();
   const { data: me } = useMe();
@@ -90,6 +91,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     syncTabletLayout();
     query.addEventListener("change", syncTabletLayout);
     return () => query.removeEventListener("change", syncTabletLayout);
+  }, []);
+
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 768px)");
+    const syncMobileLayout = () => setMobileLayout(query.matches);
+    syncMobileLayout();
+    query.addEventListener("change", syncMobileLayout);
+    return () => query.removeEventListener("change", syncMobileLayout);
   }, []);
 
   useEffect(() => {
@@ -313,7 +322,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               Gravity OS
             </span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", minWidth: 0 }}>
+          <div className="mobile-topbar-actions">
             {memberships.length > 1 && (
               <select
                 value={workspaceId ?? ""}
@@ -335,6 +344,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 ))}
               </select>
             )}
+            {mobileLayout && <NotificationsBell />}
             <button
               onClick={signOut}
               aria-label="Sign out"
@@ -354,7 +364,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="app-main"><div className="app-notification-bar"><NotificationsBell /></div>{children}</main>
+        {!mobileLayout && (
+          <header className="desktop-topbar">
+            <NotificationsBell />
+          </header>
+        )}
+
+        <main className="app-main">{children}</main>
       </div>
 
       {mobileMoreOpen && (

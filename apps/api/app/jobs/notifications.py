@@ -11,6 +11,8 @@ from app.core.db import get_service_client
 from app.integrations.resend import ResendClient, render_notification_email
 from app.services.notifications import create_notification
 
+EMAIL_DELIVERY_LEASE = timedelta(minutes=15)
+
 
 def _local_date(timezone_name: str, now: datetime) -> date:
     try:
@@ -101,6 +103,42 @@ def _retry_at(now: datetime, attempts: int) -> str:
     return (now + timedelta(minutes=delay_minutes)).isoformat()
 
 
+def _recover_stale_email_deliveries(*, service: Any, now: datetime) -> int:
+    """Release claims abandoned by a worker before it recorded an outcome."""
+    stale_before = (now - EMAIL_DELIVERY_LEASE).isoformat()
+    rows = (
+        service.table("email_deliveries")
+        .select("id,attempts,max_attempts,updated_at")
+        .eq("status", "processing")
+        .lte("updated_at", stale_before)
+        .execute()
+        .data
+        or []
+    )
+    recovered = 0
+    for row in rows:
+        exhausted = int(row.get("attempts", 0)) >= int(row.get("max_attempts", 5))
+        payload = {
+            "status": "cancelled" if exhausted else "failed",
+            "last_error": "Delivery worker lease expired before completion.",
+        }
+        if not exhausted:
+            payload["next_attempt_at"] = now.isoformat()
+        released = (
+            service.table("email_deliveries")
+            .update(payload)
+            .eq("id", row["id"])
+            .eq("status", "processing")
+            .eq("updated_at", row["updated_at"])
+            .execute()
+            .data
+            or []
+        )
+        if released:
+            recovered += 1
+    return recovered
+
+
 def deliver_pending_emails(
     *,
     service: Any | None = None,
@@ -112,6 +150,7 @@ def deliver_pending_emails(
     service = service or get_service_client()
     now = now or datetime.now(timezone.utc)
     resend = resend or ResendClient()
+    _recover_stale_email_deliveries(service=service, now=now)
     rows = (
         service.table("email_deliveries")
         .select("*")

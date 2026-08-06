@@ -72,6 +72,7 @@ export default function SettingsPage() {
   const notificationPreferences = useNotificationPreferences();
   const saveNotificationPreferences = useNotificationPreferencesMutation();
   const [preferences, setPreferences] = useState<NotificationPreferencesUpdate | null>(null);
+  const [notificationPreferencesSaved, setNotificationPreferencesSaved] = useState(false);
 
   // Seed form from server data
   useEffect(() => {
@@ -200,7 +201,10 @@ export default function SettingsPage() {
                 <input
                   type="checkbox"
                   checked={preferences[key]}
-                  onChange={(event) => setPreferences({ ...preferences, [key]: event.target.checked })}
+                  onChange={(event) => {
+                    setNotificationPreferencesSaved(false);
+                    setPreferences({ ...preferences, [key]: event.target.checked });
+                  }}
                   style={{ marginTop: "0.2rem" }}
                 />
                 <span><strong style={{ display: "block", fontSize: "0.86rem" }}>{label}</strong><small style={{ color: "var(--muted-2)" }}>{description}</small></span>
@@ -213,7 +217,9 @@ export default function SettingsPage() {
                     <input
                       type="checkbox"
                       checked={preferences.reminder_days_before.includes(day)}
+                      disabled={!preferences.deadline_reminders}
                       onChange={(event) => {
+                        setNotificationPreferencesSaved(false);
                         const next = event.target.checked
                           ? [...preferences.reminder_days_before, day]
                           : preferences.reminder_days_before.filter((value) => value !== day);
@@ -226,13 +232,20 @@ export default function SettingsPage() {
               </div>
             </Field>
             <ErrorText error={notificationPreferences.error ?? saveNotificationPreferences.error} />
-            <div>
+            <p style={{ margin: 0, color: "var(--muted-2)", fontSize: "0.78rem" }}>
+              Email notifications are delivered by the five-minute reminder cycle and may take up to five minutes to arrive.
+            </p>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
               <Button
-                onClick={() => preferences.reminder_days_before.length > 0 && saveNotificationPreferences.mutate(preferences)}
+                onClick={() => preferences.reminder_days_before.length > 0 && saveNotificationPreferences.mutate(
+                  preferences,
+                  { onSuccess: () => setNotificationPreferencesSaved(true) },
+                )}
                 disabled={saveNotificationPreferences.isPending || preferences.reminder_days_before.length === 0}
               >
                 {saveNotificationPreferences.isPending ? "Saving…" : "Save notification preferences"}
               </Button>
+              {notificationPreferencesSaved && <span style={{ fontSize: "0.82rem", color: "var(--success)" }}>Saved</span>}
             </div>
           </div>
         )}

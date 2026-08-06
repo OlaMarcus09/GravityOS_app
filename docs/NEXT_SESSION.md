@@ -27,11 +27,16 @@ comments, approval control, notifications, and an accountable activity history.
 - Owner/admin membership protections and viewer read-only enforcement.
 - Projects, tasks, assignments, comments, mentions, and activity feed.
 - Persistent notifications and invitation/assignment/mention alerts.
+- Installable PWA metadata, safe service-worker registration, and a static
+  offline fallback without caching authenticated workspace data.
 - Task approval workflow for Team workspaces.
 - Immutable approval event history and server-side approval transitions.
 - Admin plan audit history, user search, suspension, and reactivation.
 - Cross-workspace reference validation and database tenancy guards.
 - Manager-facing approval review queue with review notes and decision context.
+- Task-specific notification links that focus the affected task.
+- Persistent desktop/mobile notification chrome with accessible dismissal.
+- Stale email-delivery lease recovery so interrupted workers cannot strand mail.
 - Verified member email display and filterable workspace activity.
 
 ## Supabase migrations
@@ -119,11 +124,9 @@ history table without rewriting those entries.
 
 Start the next session here:
 
-1. Set the same `NOTIFICATION_CRON_SECRET` value on the Render web service and as
-   a GitHub Actions repository secret, then manually run the `Notification
-   reminders` workflow once. The public repository workflow replaces the paid
-   Render cron service.
-2. Confirm Render and Vercel deploy the resulting scheduler commit, then run API health, production CORS,
+1. Commit and deploy the PWA, notification deep-link/chrome, preference feedback,
+   and stale email-delivery recovery changes from this session.
+2. Once the current ISP/Vercel routing issue is bypassed, run API health, production CORS,
    invitation-link, and browser network checks against the actual dashboard URLs.
 3. Send a disposable-account assignment, mention, approval, and due-date reminder;
    confirm one in-app record and one professional email for each enabled event.

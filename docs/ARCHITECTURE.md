@@ -237,6 +237,19 @@ SMTP separately owns signup, reset, confirmation, and workspace invitation email
 so invitations are not duplicated by the application outbox. Web Push, mobile
 push, weekly digests, and delivery webhooks are deferred.
 
+The delivery worker treats `processing` outbox rows as leased work. Claims older
+than 15 minutes are released for retry, or cancelled when their bounded attempt
+count is exhausted, so a worker timeout cannot strand email indefinitely.
+
+### Progressive web app foundation
+
+The web client publishes install metadata and registers a production-only
+service worker. The worker caches only a static offline explanation and brand
+icon; authenticated pages, API responses, mutations, and application assets
+remain network-only. This gives supported browsers an installable standalone
+experience without risking stale workspace data. Offline editing, background
+sync, Web Push, and native mobile packaging remain deferred.
+
 ### Relationship summary
 
 ```text
@@ -560,7 +573,9 @@ These items describe the current engineering boundary, not completed behavior:
    collaboration, task behavior, permissions, security hardening, tenant
    references, catalogue contracts, and public error responses. Broader CRUD,
    RLS, dashboard aggregation, and clean-database integration coverage remains.
-   There is still no frontend test suite.
+   The frontend has Playwright smoke coverage for public/auth entry points and
+   desktop, mobile, and tablet projects. Broader authenticated workflow coverage
+   and repeatable CI execution remain gaps.
 5. **Frontend build health:** source-only typechecking now passes through the
    dedicated `apps/web/tsconfig.typecheck.json` project (generated `.next`
    types are excluded). The production build still needs CI/clean-install

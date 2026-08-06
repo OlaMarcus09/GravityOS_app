@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { useNotificationMutations, useNotifications } from "@/lib/queries/useNotifications";
 
@@ -18,24 +18,50 @@ function relativeTime(value: string) {
 
 export function NotificationsBell() {
   const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const popoverId = useId();
   const notifications = useNotifications(8);
   const mutations = useNotificationMutations();
   const items = notifications.data?.items ?? [];
   const unread = notifications.data?.unread_count ?? 0;
 
+  useEffect(() => {
+    if (!open) return;
+    const closeOnOutsidePress = (event: PointerEvent) => {
+      if (!wrapRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOnOutsidePress);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePress);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+
   return (
-    <div className="notification-bell-wrap">
-      <button className="notification-bell" aria-label={`${unread} unread notifications`} onClick={() => setOpen((value) => !value)}>
+    <div ref={wrapRef} className="notification-bell-wrap">
+      <button
+        type="button"
+        className="notification-bell"
+        aria-label={`${unread} unread notifications`}
+        aria-expanded={open}
+        aria-controls={popoverId}
+        aria-haspopup="dialog"
+        onClick={() => setOpen((value) => !value)}
+      >
         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
         </svg>
         {unread > 0 && <span className="notification-count">{unread > 99 ? "99+" : unread}</span>}
       </button>
       {open && (
-        <div className="notification-popover glass">
+        <div id={popoverId} className="notification-popover glass" role="dialog" aria-label="Notifications">
           <div className="notification-popover-head">
             <strong>Notifications</strong>
-            {unread > 0 && <button onClick={() => mutations.markAllRead.mutate()}>Mark all read</button>}
+            {unread > 0 && <button type="button" onClick={() => mutations.markAllRead.mutate()}>Mark all read</button>}
           </div>
           <div className="notification-popover-list">
             {notifications.isLoading && <p>Loading notifications…</p>}

@@ -108,6 +108,7 @@ def test_update_task_notifies_only_when_assignee_changes():
     assert result == updated
     assert [call.args[0] for call in service.table.call_args_list] == ["workspace_activity_events"]
     notify.assert_called_once()
+    assert notify.call_args.kwargs["action_url"] == "/tasks?task=task-1"
 
 
 def test_update_task_does_not_notify_when_assignee_is_unchanged():
@@ -154,7 +155,7 @@ def test_approval_request_notifies_other_workspace_reviewers() -> None:
         "admin-1",
     }
     assert all(call.kwargs["kind"] == "task_approval_requested" for call in notify.call_args_list)
-    assert all(call.kwargs["action_url"] == "/tasks" for call in notify.call_args_list)
+    assert all(call.kwargs["action_url"] == "/tasks?task=task-1" for call in notify.call_args_list)
 
 
 def test_approval_decision_notifies_submitter_and_assignee_once_each() -> None:
@@ -172,6 +173,8 @@ def test_approval_decision_notifies_submitter_and_assignee_once_each() -> None:
         patch("app.routers.tasks.create_notification") as notify,
     ):
         _notify_approval(_context(Mock()), task, "approved")
+
+    assert all(call.kwargs["action_url"] == "/tasks?task=task-1" for call in notify.call_args_list)
 
     assert {call.kwargs["recipient_id"] for call in notify.call_args_list} == {
         "submitter-1",

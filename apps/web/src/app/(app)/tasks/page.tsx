@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import { CommentsPanel } from "@/components/CommentsPanel";
 import type { Task, TaskInput, TaskStatus, WorkspaceMember } from "@/lib/api";
@@ -28,6 +29,7 @@ const STATUSES: TaskStatus[] = ["todo", "in_progress", "blocked", "done"];
 const PRIORITIES = ["low", "medium", "high"] as const;
 
 export default function TasksPage() {
+  const searchParams = useSearchParams();
   const { isReadOnly, workspaceId, role, plan } = useWorkspace();
   const { data, isLoading, error } = useTasks();
   const { create, update, remove, submitApproval, approve, reject } = useTaskMutations();
@@ -38,6 +40,7 @@ export default function TasksPage() {
   const [commenting, setCommenting] = useState<Task | null>(null);
   const [reviewing, setReviewing] = useState<{ task: Task; decision: "approve" | "reject" } | null>(null);
   const [actionError, setActionError] = useState<{ taskId: string; error: Error } | null>(null);
+  const focusedTaskId = searchParams.get("task");
   const members = useTeamMembers(workspaceId);
   const canReview = plan === "team" && (role === "owner" || role === "admin");
   const pendingReviews = data?.filter((task) => task.approval_status === "pending") ?? [];
@@ -50,6 +53,16 @@ export default function TasksPage() {
     const targetId = new URLSearchParams(window.location.search).get("comments");
     if (targetId) setCommenting(data.find((task) => task.id === targetId) ?? null);
   }, [data]);
+
+  useEffect(() => {
+    if (!data || !focusedTaskId || !data.some((task) => task.id === focusedTaskId)) return;
+    const frame = window.requestAnimationFrame(() => {
+      const target = document.getElementById(`task-${focusedTaskId}`);
+      target?.scrollIntoView({ behavior: "smooth", block: "center" });
+      target?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [data, focusedTaskId]);
 
   const openCreate = () => {
     setEditing(null);
@@ -200,11 +213,16 @@ export default function TasksPage() {
             const approved = plan === "team" && t.approval_status === "approved";
             const rejected = plan === "team" && t.approval_status === "rejected";
             return (
-              <Card
+              <div
                 key={t.id}
-                className="task-list-row"
-                style={{ padding: "1rem" }}
+                id={`task-${t.id}`}
+                className={`task-focus-target${focusedTaskId === t.id ? " is-focused" : ""}`}
+                tabIndex={-1}
               >
+                <Card
+                  className="task-list-row"
+                  style={{ padding: "1rem" }}
+                >
                 <div className="task-row-main">
                   <input
                     type="checkbox"
@@ -291,7 +309,8 @@ export default function TasksPage() {
                 {actionError?.taskId === t.id && (
                   <div className="task-row-error"><ErrorText error={actionError.error} /></div>
                 )}
-              </Card>
+                </Card>
+              </div>
             );
           })}
         </div>

@@ -185,6 +185,18 @@ h2 {
   display: none;
 }
 
+.desktop-topbar {
+  display: flex;
+  justify-content: flex-end;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  min-height: 58px;
+  padding: 0.65rem 1.5rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
 /* iPad and small laptop widths get a stable icon rail, leaving the content
    area wide enough for forms and task cards in portrait orientation. */
 @media (min-width: 769px) and (max-width: 1100px) {
@@ -192,14 +204,15 @@ h2 {
     padding: 1.5rem;
   }
 
-  .app-notification-bar {
-    margin-right: 0;
-  }
 }
 
 @media (max-width: 768px) {
   .app-sidebar {
     display: none !important;
+  }
+
+  .desktop-topbar {
+    display: none;
   }
 
   .app-main {
@@ -222,6 +235,14 @@ h2 {
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
     border-bottom: 1px solid var(--border);
+  }
+
+  .mobile-topbar-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    min-width: 0;
   }
 
   /* Five large, labelled targets pinned to the bottom of the viewport. */
@@ -550,14 +571,6 @@ h2 {
   overflow-wrap: anywhere;
 }
 
-.app-notification-bar {
-  display: flex;
-  justify-content: flex-end;
-  min-height: 38px;
-  margin: 0 -1rem 0.45rem 0;
-  position: relative;
-  z-index: 20;
-}
 .notification-bell-wrap { position: relative; }
 .notification-bell { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; border: 1px solid var(--border); border-radius: 50%; background: var(--surface-2); color: var(--fg); cursor: pointer; }
 .notification-count { position: absolute; top: -5px; right: -5px; min-width: 18px; height: 18px; padding: 0 4px; display: grid; place-items: center; border-radius: 999px; background: var(--danger); color: white; font-size: 0.65rem; font-weight: 700; }
@@ -601,6 +614,8 @@ h2 {
 .activity-meta { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 
 .task-list-row { display: flex; flex-direction: column; gap: 0.8rem; }
+.task-focus-target { scroll-margin-top: 5rem; outline: none; }
+.task-focus-target.is-focused > .task-list-row { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft), var(--shadow); }
 .task-row-main { display: flex; align-items: flex-start; gap: 0.8rem; min-width: 0; }
 .task-row-copy { flex: 1; min-width: 180px; }
 .task-row-meta { display: flex; gap: 0.25rem 0.75rem; flex-wrap: wrap; margin-top: 0.25rem; color: var(--muted); font-size: 0.76rem; }
@@ -643,7 +658,6 @@ h2 {
   .notification-page-actions > *, .notification-page-actions button { flex: 1; }
   .project-card-actions { flex-wrap: wrap; }
   .project-card-actions > *, .project-card-actions button { flex: 1 1 calc(50% - 0.35rem); }
-  .app-notification-bar { margin: 0 0 0.65rem; }
   .task-row-main { flex-wrap: wrap; }
   .task-row-copy { flex-basis: calc(100% - 34px); }
   .task-row-badges { width: 100%; justify-content: flex-start; padding-left: 34px; }

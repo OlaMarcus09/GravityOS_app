@@ -50,7 +50,7 @@ def _notify_assignee(ctx: WorkspaceContext, task: dict) -> None:
         kind="task_assigned",
         title="Task assigned to you",
         message=f'You were assigned to "{task["title"]}".',
-        action_url="/tasks",
+        action_url=f"/tasks?task={task['id']}",
         metadata={
             "task_id": task["id"],
             "project_id": task.get("project_id"),
@@ -111,7 +111,7 @@ def _notify_approval(ctx: WorkspaceContext, task: dict, event: str) -> None:
                 kind=kind,
                 title=title,
                 message=message,
-                action_url="/tasks",
+                action_url=f"/tasks?task={task['id']}",
                 metadata={"task_id": task["id"], "actor_id": ctx.auth.user_id},
                 dedupe_key=f"task-approval:{event}:{task['id']}:{recipient_id}:{event_version}",
                 service=service,
