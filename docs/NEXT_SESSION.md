@@ -10,6 +10,7 @@ Last updated: 2026-08-06
 - Do not add co-author metadata to commits.
 - GitHub `main` is the product/deployment branch; `app/master` is stale.
 - Foundation commit: `c510bcb feat: add enterprise and proactive notification foundations`.
+- Pilot readiness commit: `0fae318 feat: finish pilot notification and pwa readiness`.
 - The free GitHub Actions scheduler replacement follows that foundation; no paid
   Render cron job is required.
 
@@ -124,8 +125,8 @@ history table without rewriting those entries.
 
 Start the next session here:
 
-1. Commit and deploy the PWA, notification deep-link/chrome, preference feedback,
-   and stale email-delivery recovery changes from this session.
+1. Confirm Vercel and Render deploy `0fae318`, then verify the manifest,
+   notification task links, preference feedback, and email worker health in production.
 2. Once the current ISP/Vercel routing issue is bypassed, run API health, production CORS,
    invitation-link, and browser network checks against the actual dashboard URLs.
 3. Send a disposable-account assignment, mention, approval, and due-date reminder;
