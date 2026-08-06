@@ -230,11 +230,12 @@ and due-date reminders. `email_deliveries` is a service-owned outbox with unique
 idempotency keys, provider identifiers, retry scheduling, and bounded attempts.
 
 The API queues email without blocking the primary task or comment mutation. A
-Render cron process runs `python -m app.jobs.notifications`, creates timezone-aware
-task reminders from profile timezones, and delivers pending messages through
-Resend. Supabase Custom SMTP separately owns signup, reset, confirmation, and
-workspace invitation email so invitations are not duplicated by the application
-outbox. Web Push, mobile push, weekly digests, and delivery webhooks are deferred.
+scheduled GitHub Actions workflow calls a secret-protected internal API endpoint
+every five minutes. The endpoint creates timezone-aware task reminders from
+profile timezones and delivers pending messages through Resend. Supabase Custom
+SMTP separately owns signup, reset, confirmation, and workspace invitation email
+so invitations are not duplicated by the application outbox. Web Push, mobile
+push, weekly digests, and delivery webhooks are deferred.
 
 ### Relationship summary
 
@@ -513,6 +514,7 @@ CORS_ORIGINS
 RESEND_API_KEY
 EMAIL_FROM
 EMAIL_REPLY_TO
+NOTIFICATION_CRON_SECRET
 ENVIRONMENT
 STRIPE_SECRET_KEY                  # reserved/partial
 STRIPE_WEBHOOK_SECRET              # reserved/partial

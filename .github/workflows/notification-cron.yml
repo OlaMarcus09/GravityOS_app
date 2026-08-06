@@ -1,0 +1,25 @@
+name: Notification reminders
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: notification-reminders
+  cancel-in-progress: false
+
+jobs:
+  run-notifications:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Generate reminders and deliver email
+        env:
+          NOTIFICATION_CRON_SECRET: ${{ secrets.NOTIFICATION_CRON_SECRET }}
+        run: |
+          curl --fail-with-body --silent --show-error \
+            --retry 2 --max-time 240 \
+            --request POST \
+            --header "X-Cron-Key: ${NOTIFICATION_CRON_SECRET}" \
+            https://gravityos-app.onrender.com/internal/notifications/run

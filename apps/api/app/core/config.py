@@ -35,6 +35,7 @@ class Settings(BaseSettings):
         default="Gravity OS <notifications@gravityos.tech>", alias="EMAIL_FROM"
     )
     email_reply_to: str = Field(default="", alias="EMAIL_REPLY_TO")
+    notification_cron_secret: str = Field(default="", alias="NOTIFICATION_CRON_SECRET")
     super_admin_emails: str = Field(default="", alias="SUPER_ADMIN_EMAILS")
     web_app_url: str = Field(default="http://localhost:3000", alias="WEB_APP_URL")
 

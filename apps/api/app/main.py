@@ -5,12 +5,15 @@ the skeleton; the rest return stub markers behind real dependency chains.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, FastAPI, Request
+from secrets import compare_digest
+
+from fastapi import APIRouter, FastAPI, Header, Request, status
 from fastapi.exceptions import HTTPException, RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import get_settings
+from app.jobs.notifications import run_notification_cycle
 from app.routers import (
     billing,
     budgets,
@@ -87,6 +90,27 @@ def create_app() -> FastAPI:
     @app.get("/health", tags=["health"])
     def health() -> dict:
         return {"status": "ok", "environment": settings.environment}
+
+    @app.post("/internal/notifications/run", include_in_schema=False)
+    def run_notifications(
+        x_cron_key: str | None = Header(default=None, alias="X-Cron-Key"),
+    ) -> dict[str, int]:
+        if not settings.notification_cron_secret:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail={
+                    "error": {
+                        "code": "cron_not_configured",
+                        "message": "Notification scheduling is not configured",
+                    }
+                },
+            )
+        if not x_cron_key or not compare_digest(x_cron_key, settings.notification_cron_secret):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail={"error": {"code": "invalid_cron_key", "message": "Invalid cron key"}},
+            )
+        return run_notification_cycle()
 
     v1 = APIRouter(prefix=API_PREFIX)
     for module in (

@@ -1,6 +1,6 @@
 # Next session handoff
 
-Last updated: 2026-08-05
+Last updated: 2026-08-06
 
 ## Repository
 
@@ -9,9 +9,9 @@ Last updated: 2026-08-05
 - Push product work to the `app` remote, not `origin`.
 - Do not add co-author metadata to commits.
 - GitHub `main` is the product/deployment branch; `app/master` is stale.
-- Latest pushed commit: `6bf63e5 docs: update pilot session handoff`.
-- Deferred Enterprise foundation work is currently validated locally but remains
-  uncommitted and unapplied to Supabase.
+- Foundation commit: `c510bcb feat: add enterprise and proactive notification foundations`.
+- The free GitHub Actions scheduler replacement follows that foundation; no paid
+  Render cron job is required.
 
 ## Product direction
 
@@ -45,9 +45,9 @@ comments, approval control, notifications, and an accountable activity history.
 - `0016_task_approvals.sql`
 - `0017_team_workflow_integrity.sql`
 - `0018_task_approval_completion.sql`
-- `0019_enterprise_plan.sql` (local only)
-- `0020_enterprise_foundations.sql` (local only)
-- `0021_proactive_notifications.sql` (local only)
+- `0019_enterprise_plan.sql` (applied 2026-08-05)
+- `0020_enterprise_foundations.sql` (applied 2026-08-05)
+- `0021_proactive_notifications.sql` (applied 2026-08-05)
 
 Migrations `0015`, `0016`, and `0017` have been applied in the active Supabase
 project. `0017` protects approval columns from direct PostgREST writes, adds
@@ -59,16 +59,19 @@ Migration `0018` was applied to the active Supabase project on 2026-08-02. It
 makes approval atomically complete the task, reopens rejected tasks for
 corrections, and protects reviewed-task history from deletion.
 
-Migrations `0019`, `0020`, and `0021` are ready locally but have not been applied. They
-add the reserved Enterprise enum value, organization membership and owner-opt-in
+Migrations `0019`, `0020`, and `0021` are applied in production. They add the
+reserved Enterprise enum value, organization membership and owner-opt-in
 workspace links, read-only organization access to six approved workspace tables,
 Soundcharts identity/snapshot storage, notification preferences, and a
 service-owned email outbox. Soundcharts reads are available to every direct
-workspace member regardless of plan; plan gating is deferred.
+workspace member regardless of plan; plan gating is deferred. The production
+database has older timestamped migration-history entries from earlier manual
+deployments; the three new migrations were applied directly and recorded in the
+history table without rewriting those entries.
 
 ## Validation
 
-- API suite: 132 tests passed.
+- API suite: 135 tests passed.
 - Frontend typecheck passed after the responsive/onboarding changes.
 - Frontend production build compiled, validated types, and generated all 20 routes
   on Next.js `14.2.35`; the local process required interruption after printing the
@@ -116,25 +119,23 @@ workspace member regardless of plan; plan gating is deferred.
 
 Start the next session here:
 
-1. Review the local Enterprise and proactive-notification diff, then commit and
-   push it to `app/main` when approved. Apply migrations `0019`, `0020`, then
-   `0021` to Supabase only with explicit production authorization.
-2. Create or sync the `gravity-os-notifications` Render cron service and add its
-   own `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, and
-   `EMAIL_REPLY_TO` values. Cron services do not inherit the web service secrets.
-3. Confirm Render and Vercel deploy the resulting commit, then run API health, production CORS,
+1. Set the same `NOTIFICATION_CRON_SECRET` value on the Render web service and as
+   a GitHub Actions repository secret, then manually run the `Notification
+   reminders` workflow once. The public repository workflow replaces the paid
+   Render cron service.
+2. Confirm Render and Vercel deploy the resulting scheduler commit, then run API health, production CORS,
    invitation-link, and browser network checks against the actual dashboard URLs.
-4. Send a disposable-account assignment, mention, approval, and due-date reminder;
+3. Send a disposable-account assignment, mention, approval, and due-date reminder;
    confirm one in-app record and one professional email for each enabled event.
-5. Live-test that approval marks a task `Approved · Completed`, while rejection
+4. Live-test that approval marks a task `Approved · Completed`, while rejection
    reopens it for editing/resubmission and retains the decision history.
-6. Run a live two-workspace isolation check and confirm platform-admin support and
+5. Run a live two-workspace isolation check and confirm platform-admin support and
    plan-audit sections in production.
-7. Seed and rehearse the guided demo workspace for artist managers and label owners.
-8. On a current device/browser, verify laptop 1440×900 and 1280×800, iPad portrait
+6. Seed and rehearse the guided demo workspace for artist managers and label owners.
+7. On a current device/browser, verify laptop 1440×900 and 1280×800, iPad portrait
    and landscape, and mobile Safari/Chrome. Use a disposable email to rehearse the
    owner → Admin invitation flow before inviting the artist's real assistant.
-9. If production is green, run the complete pilot rehearsal: Owner creates task →
+8. If production is green, run the complete pilot rehearsal: Owner creates task →
    team member submits → Admin reviews → approval completes the task, while
    rejection reopens it for correction and resubmission.
 
