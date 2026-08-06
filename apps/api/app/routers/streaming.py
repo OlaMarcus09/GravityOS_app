@@ -18,20 +18,22 @@ _STAT_GROUPS = ("social", "streaming", "popularity", "retention", "score")
 
 
 def _link_or_404(ctx: WorkspaceContext, link_id: str) -> dict[str, Any]:
-    result = (
+    rows = (
         ctx.db.table("artist_streaming_links")
         .select("*")
         .eq("id", link_id)
         .eq("workspace_id", ctx.workspace_id)
-        .maybe_single()
+        .limit(1)
         .execute()
+        .data
+        or []
     )
-    if not result.data:
+    if not rows:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"error": {"code": "not_found", "message": "Soundcharts artist link not found"}},
         )
-    return result.data
+    return rows[0]
 
 
 def _snapshot_rows(
@@ -74,15 +76,17 @@ def _snapshot_rows(
 def get_artist_link(
     ctx: WorkspaceContext = Depends(get_workspace_context),
 ) -> dict[str, Any] | None:
-    result = (
+    rows = (
         ctx.db.table("artist_streaming_links")
         .select("*")
         .eq("workspace_id", ctx.workspace_id)
         .eq("platform", "soundcharts")
-        .maybe_single()
+        .limit(1)
         .execute()
+        .data
+        or []
     )
-    return result.data or None
+    return rows[0] if rows else None
 
 
 @router.put("/link")

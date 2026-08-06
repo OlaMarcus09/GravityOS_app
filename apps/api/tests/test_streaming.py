@@ -9,12 +9,17 @@ from fastapi import HTTPException
 
 from app.core.auth import AuthContext
 from app.core.deps import WorkspaceContext
-from app.routers.streaming import _snapshot_rows, get_streaming_summary, sync_artist_stats
+from app.routers.streaming import (
+    _snapshot_rows,
+    get_artist_link,
+    get_streaming_summary,
+    sync_artist_stats,
+)
 
 
 def _query(data) -> Mock:
     query = Mock()
-    for method in ("select", "eq", "maybe_single", "order", "limit", "upsert"):
+    for method in ("select", "eq", "order", "limit", "upsert"):
         getattr(query, method).return_value = query
     query.execute.return_value = Mock(data=data)
     return query
@@ -52,13 +57,20 @@ def test_snapshot_rows_maps_supported_current_stat_groups() -> None:
     assert rows[1]["captured_at"] == "2026-08-06T00:00:00+00:00"
 
 
+def test_get_artist_link_returns_none_when_workspace_has_not_connected_one() -> None:
+    db = Mock()
+    db.table.return_value = _query([])
+
+    assert get_artist_link(_context(db)) is None
+
+
 def test_sync_artist_stats_persists_service_owned_snapshots() -> None:
     link_query = _query(
-        {
+        [{
             "id": "link-1",
             "workspace_id": "workspace-1",
             "soundcharts_uuid": "11e81bd3-4a1f-de5c-8a88-a0369fe50396",
-        }
+        }]
     )
     db = Mock()
     db.table.return_value = link_query
@@ -93,11 +105,11 @@ def test_sync_artist_stats_persists_service_owned_snapshots() -> None:
 def test_sync_artist_stats_hides_upstream_authorization_details() -> None:
     db = Mock()
     db.table.return_value = _query(
-        {
+        [{
             "id": "link-1",
             "workspace_id": "workspace-1",
             "soundcharts_uuid": "11e81bd3-4a1f-de5c-8a88-a0369fe50396",
-        }
+        }]
     )
     request = httpx.Request("GET", "https://customer.api.soundcharts.com/test")
     response = httpx.Response(403, request=request)
