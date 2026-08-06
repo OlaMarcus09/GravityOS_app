@@ -218,23 +218,38 @@ export function Modal({
   onClose,
   title,
   children,
+  panelClassName,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   children: ReactNode;
+  panelClassName?: string;
 }) {
   useEffect(() => {
     if (!open) return;
     const previousOverflow = document.body.style.overflow;
+    const root = document.documentElement;
+    const previousViewportHeight = root.style.getPropertyValue("--modal-viewport-height");
+    const syncViewportHeight = () => {
+      const height = window.visualViewport?.height ?? window.innerHeight;
+      root.style.setProperty("--modal-viewport-height", `${Math.round(height)}px`);
+    };
     document.body.style.overflow = "hidden";
+    syncViewportHeight();
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("resize", syncViewportHeight);
+    window.visualViewport?.addEventListener("resize", syncViewportHeight);
     return () => {
       document.body.style.overflow = previousOverflow;
+      if (previousViewportHeight) root.style.setProperty("--modal-viewport-height", previousViewportHeight);
+      else root.style.removeProperty("--modal-viewport-height");
       window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("resize", syncViewportHeight);
+      window.visualViewport?.removeEventListener("resize", syncViewportHeight);
     };
   }, [open, onClose]);
 
@@ -246,7 +261,7 @@ export function Modal({
       role="presentation"
     >
       <div
-        className="modal-panel"
+        className={`modal-panel${panelClassName ? ` ${panelClassName}` : ""}`}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"

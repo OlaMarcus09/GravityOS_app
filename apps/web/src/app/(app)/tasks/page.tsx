@@ -325,7 +325,12 @@ export default function TasksPage() {
         error={mutationError}
         members={members.data ?? []}
       />
-      <Modal open={Boolean(commenting)} onClose={() => setCommenting(null)} title={commenting ? `${commenting.title} · Comments` : "Comments"}>
+      <Modal
+        open={Boolean(commenting)}
+        onClose={() => setCommenting(null)}
+        title={commenting ? `${commenting.title} · Comments` : "Comments"}
+        panelClassName="comments-modal-panel"
+      >
         {commenting && <CommentsPanel targetType="task" targetId={commenting.id} />}
       </Modal>
       <ReviewModal
