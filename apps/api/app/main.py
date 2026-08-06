@@ -27,6 +27,7 @@ from app.routers import (
     notifications,
     projects,
     releases,
+    streaming,
     tasks,
     workspaces,
 )
@@ -122,6 +123,7 @@ def create_app() -> FastAPI:
         tasks,
         calendar,
         releases,
+        streaming,
         catalogue,
         budgets,
         marketing,

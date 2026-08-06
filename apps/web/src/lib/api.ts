@@ -224,6 +224,42 @@ export const notificationsApi = {
     apiFetch<NotificationPreferences>("/notifications/preferences", { method: "PUT", body }),
 };
 
+export type ArtistStreamingLink = {
+  id: string;
+  workspace_id: string;
+  platform: "soundcharts";
+  soundcharts_uuid: string;
+  connected_at: string;
+};
+
+export type StreamingSnapshot = {
+  id: string;
+  workspace_id: string;
+  artist_link_id: string;
+  captured_at: string;
+  platform: string;
+  metric_type: "social" | "streaming" | "popularity" | "retention" | "score";
+  value: number | string;
+};
+
+export const streamingApi = {
+  link: (ws: string) => apiFetch<ArtistStreamingLink | null>("/streaming/link", { workspaceId: ws }),
+  connect: (ws: string, soundchartsUuid: string) => apiFetch<ArtistStreamingLink>("/streaming/link", {
+    method: "PUT",
+    body: { soundcharts_uuid: soundchartsUuid, platform: "soundcharts" },
+    workspaceId: ws,
+  }),
+  disconnect: (ws: string, linkId: string) => apiFetch<void>(`/streaming/link/${linkId}`, {
+    method: "DELETE",
+    workspaceId: ws,
+  }),
+  summary: (ws: string) => apiFetch<StreamingSnapshot[]>("/streaming/summary", { workspaceId: ws }),
+  sync: (ws: string, linkId: string) => apiFetch<{ synced_at: string; snapshots_written: number }>(
+    `/streaming/link/${linkId}/sync`,
+    { method: "POST", workspaceId: ws },
+  ),
+};
+
 // --- Collaboration ---------------------------------------------------------
 
 export type CollaborationTarget = "project" | "task";

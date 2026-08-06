@@ -7,6 +7,7 @@ import { useInvitationMutations, usePendingInvitations, useWorkspaceInvitations 
 import { useWorkspace } from "@/lib/workspace";
 import type { NotificationPreferencesUpdate } from "@/lib/api";
 import { useNotificationPreferences, useNotificationPreferencesMutation } from "@/lib/queries/useNotifications";
+import { useArtistStreamingLink, useStreamingMutations, useStreamingSummary } from "@/lib/queries/useStreaming";
 import { Badge, Button, Card, ErrorText, Field, Input, PageHeader, Select } from "@/components/ui";
 
 const CREATIVE_ROLES = [
@@ -57,7 +58,7 @@ const PLAN_FEATURES: Record<string, { label: string; features: string[] }> = {
 
 export default function SettingsPage() {
   const { data: me } = useMe();
-  const { plan, role, workspaceId, setWorkspaceId } = useWorkspace();
+  const { plan, role, workspaceId, setWorkspaceId, isReadOnly } = useWorkspace();
   const mutation = useProfileMutation();
 
   const [displayName, setDisplayName] = useState("");
@@ -73,6 +74,10 @@ export default function SettingsPage() {
   const saveNotificationPreferences = useNotificationPreferencesMutation();
   const [preferences, setPreferences] = useState<NotificationPreferencesUpdate | null>(null);
   const [notificationPreferencesSaved, setNotificationPreferencesSaved] = useState(false);
+  const [soundchartsUuid, setSoundchartsUuid] = useState("");
+  const streamingLink = useArtistStreamingLink(workspaceId);
+  const streamingSummary = useStreamingSummary(workspaceId);
+  const streamingMutations = useStreamingMutations(workspaceId);
 
   // Seed form from server data
   useEffect(() => {
@@ -246,6 +251,98 @@ export default function SettingsPage() {
                 {saveNotificationPreferences.isPending ? "Saving…" : "Save notification preferences"}
               </Button>
               {notificationPreferencesSaved && <span style={{ fontSize: "0.82rem", color: "var(--success)" }}>Saved</span>}
+            </div>
+          </div>
+        )}
+      </Card>
+
+      <Card style={{ padding: "1.5rem", marginBottom: "1.5rem" }}>
+        <span className="eyebrow">Soundcharts</span>
+        <p style={{ color: "var(--muted)", fontSize: "0.85rem" }}>
+          Connect this workspace to its Soundcharts artist record. Data is available to every workspace member and plan.
+        </p>
+        {streamingLink.isLoading ? (
+          <p style={{ color: "var(--muted-2)", fontSize: "0.82rem" }}>Loading artist connection…</p>
+        ) : streamingLink.data ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            <div className="streaming-connection-row">
+              <div style={{ minWidth: 0 }}>
+                <strong style={{ display: "block", fontSize: "0.88rem" }}>Artist connected</strong>
+                <small style={{ color: "var(--muted-2)", overflowWrap: "anywhere" }}>
+                  {streamingLink.data.soundcharts_uuid}
+                </small>
+              </div>
+              {!isReadOnly && (
+                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                  <Button
+                    size="sm"
+                    onClick={() => streamingMutations.sync.mutate(streamingLink.data!.id)}
+                    disabled={streamingMutations.sync.isPending}
+                  >
+                    {streamingMutations.sync.isPending ? "Syncing…" : "Sync now"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      if (window.confirm("Disconnect this Soundcharts artist and remove its imported snapshots?")) {
+                        streamingMutations.disconnect.mutate(streamingLink.data!.id);
+                      }
+                    }}
+                    disabled={streamingMutations.disconnect.isPending}
+                  >
+                    Disconnect
+                  </Button>
+                </div>
+              )}
+            </div>
+            {streamingMutations.sync.data && (
+              <span style={{ color: "var(--success)", fontSize: "0.8rem" }}>
+                Synced {streamingMutations.sync.data.snapshots_written} current metrics.
+              </span>
+            )}
+            <ErrorText error={streamingSummary.error ?? streamingMutations.sync.error ?? streamingMutations.disconnect.error} />
+            {streamingSummary.isLoading ? (
+              <p style={{ color: "var(--muted-2)", fontSize: "0.82rem" }}>Loading imported metrics…</p>
+            ) : streamingSummary.data?.length ? (
+              <div className="streaming-metric-grid">
+                {streamingSummary.data.map((metric) => (
+                  <div className="streaming-metric" key={`${metric.metric_type}-${metric.platform}`}>
+                    <small>{metric.metric_type} · {metric.platform}</small>
+                    <strong>{new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 }).format(Number(metric.value))}</strong>
+                    <time dateTime={metric.captured_at}>{new Date(metric.captured_at).toLocaleDateString()}</time>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ color: "var(--muted-2)", fontSize: "0.82rem" }}>
+                No metrics imported yet. Use Sync now after the Render credentials are configured.
+              </p>
+            )}
+          </div>
+        ) : isReadOnly ? (
+          <p style={{ color: "var(--muted-2)", fontSize: "0.82rem" }}>A workspace editor must connect the artist first.</p>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            <Field label="Soundcharts artist UUID">
+              <Input
+                value={soundchartsUuid}
+                onChange={(event) => setSoundchartsUuid(event.target.value.trim())}
+                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                autoComplete="off"
+              />
+            </Field>
+            <p style={{ margin: 0, color: "var(--muted-2)", fontSize: "0.78rem" }}>
+              Copy the UUID from the artist page or URL in Soundcharts. Connecting does not call the paid stats endpoint.
+            </p>
+            <ErrorText error={streamingLink.error ?? streamingMutations.connect.error} />
+            <div>
+              <Button
+                onClick={() => streamingMutations.connect.mutate(soundchartsUuid, { onSuccess: () => setSoundchartsUuid("") })}
+                disabled={!soundchartsUuid || streamingMutations.connect.isPending}
+              >
+                {streamingMutations.connect.isPending ? "Connecting…" : "Connect artist"}
+              </Button>
             </div>
           </div>
         )}

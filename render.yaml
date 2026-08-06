@@ -41,3 +41,7 @@ services:
         sync: false
       - key: NOTIFICATION_CRON_SECRET
         sync: false
+      - key: SOUNDCHARTS_APP_ID
+        sync: false
+      - key: SOUNDCHARTS_API_KEY
+        sync: false

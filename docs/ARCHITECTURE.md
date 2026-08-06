@@ -215,11 +215,13 @@ Soundcharts storage is also schema-ready. `artist_streaming_links` associates a
 workspace with a Soundcharts artist UUID, and `streaming_snapshots` stores
 timestamped platform metrics without requiring dashboard-time API calls. Every
 workspace member can read this data regardless of plan; workspace writers may
-manage artist links, while future service-role polling owns snapshot writes.
-The API contains credentials and a client for
-`GET /api/v2/artist/{uuid}/current/stats`, but no route calls it. Polling,
-historical audience and playlist endpoints, analytics UI, and Gravity Score
-integration are deferred.
+manage artist links. A manual, writer-only sync route calls
+`GET /api/v2/artist/{uuid}/current/stats?period=7`, normalizes the social,
+streaming, popularity, retention, and score groups, and writes snapshots with
+the service role. Settings exposes artist connection, manual sync, and a compact
+latest-metric summary to every workspace plan. Scheduled polling, artist search,
+historical audience and playlist endpoints, the full analytics dashboard, and
+Gravity Score integration are deferred.
 
 ### Proactive notifications and email
 
@@ -594,9 +596,11 @@ These items describe the current engineering boundary, not completed behavior:
 10. **Enterprise organizations:** the schema and read-only linked-workspace RLS
     exist, but rollup UI, organization admin routes, SSO/SAML, billing, and audit
     logs are deferred.
-11. **Soundcharts analytics:** identity links, snapshot storage, settings, and the
-    current-stats client exist. Polling, analytics UI, paid-endpoint selection,
-    and Gravity Score integration are deferred. Access is not plan-gated yet.
+11. **Soundcharts analytics:** identity links, snapshot storage, settings,
+    manual current-stats sync, and a compact latest-metric summary now exist.
+    Scheduled polling, artist search, historical/playlist endpoints, the full
+    analytics dashboard, and Gravity Score integration are deferred. Access is
+    not plan-gated yet.
 12. **Operational readiness:** observability, structured logging, rate limiting,
     backups/restore drills, production smoke tests, and documented incident
     procedures are not yet represented in the repository.

@@ -38,6 +38,8 @@ comments, approval control, notifications, and an accountable activity history.
 - Task-specific notification links that focus the affected task.
 - Persistent desktop/mobile notification chrome with accessible dismissal.
 - Stale email-delivery lease recovery so interrupted workers cannot strand mail.
+- Soundcharts artist connection, cost-controlled manual current-stats sync, and
+  latest imported metric summaries for every workspace plan.
 - Verified member email display and filterable workspace activity.
 
 ## Supabase migrations
@@ -127,19 +129,22 @@ Start the next session here:
 
 1. Confirm Vercel and Render deploy `0fae318`, then verify the manifest,
    notification task links, preference feedback, and email worker health in production.
-2. Once the current ISP/Vercel routing issue is bypassed, run API health, production CORS,
+2. Add `SOUNDCHARTS_APP_ID` and `SOUNDCHARTS_API_KEY` directly in Render, connect
+   a test artist UUID in Settings, and run one manual sync. A 401/403 from the
+   upstream call means the account does not include the premium current-stats endpoint.
+3. Once the current ISP/Vercel routing issue is bypassed, run API health, production CORS,
    invitation-link, and browser network checks against the actual dashboard URLs.
-3. Send a disposable-account assignment, mention, approval, and due-date reminder;
+4. Send a disposable-account assignment, mention, approval, and due-date reminder;
    confirm one in-app record and one professional email for each enabled event.
-4. Live-test that approval marks a task `Approved · Completed`, while rejection
+5. Live-test that approval marks a task `Approved · Completed`, while rejection
    reopens it for editing/resubmission and retains the decision history.
-5. Run a live two-workspace isolation check and confirm platform-admin support and
+6. Run a live two-workspace isolation check and confirm platform-admin support and
    plan-audit sections in production.
-6. Seed and rehearse the guided demo workspace for artist managers and label owners.
-7. On a current device/browser, verify laptop 1440×900 and 1280×800, iPad portrait
+7. Seed and rehearse the guided demo workspace for artist managers and label owners.
+8. On a current device/browser, verify laptop 1440×900 and 1280×800, iPad portrait
    and landscape, and mobile Safari/Chrome. Use a disposable email to rehearse the
    owner → Admin invitation flow before inviting the artist's real assistant.
-8. If production is green, run the complete pilot rehearsal: Owner creates task →
+9. If production is green, run the complete pilot rehearsal: Owner creates task →
    team member submits → Admin reviews → approval completes the task, while
    rejection reopens it for correction and resubmission.
 

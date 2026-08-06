@@ -592,6 +592,12 @@ h2 {
 .notification-page-copy p { margin: 0.3rem 0; color: var(--muted); }
 .notification-page-copy small { color: var(--muted-2); }
 .notification-page-actions { display: flex; flex-wrap: wrap; gap: 0.45rem; justify-content: flex-end; }
+.streaming-connection-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.streaming-metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.65rem; }
+.streaming-metric { display: flex; flex-direction: column; gap: 0.3rem; padding: 0.8rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); }
+.streaming-metric small { color: var(--muted-2); text-transform: capitalize; }
+.streaming-metric strong { font-family: var(--font-display); font-size: 1.15rem; }
+.streaming-metric time { color: var(--muted-2); font-size: 0.7rem; }
 
 .comments-modal-panel { height: min(720px, calc(var(--modal-viewport-height, 100dvh) - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom))); }
 .comments-modal-panel .modal-content { flex: 1; overflow: hidden; }
