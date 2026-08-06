@@ -44,7 +44,7 @@ $$;
 
 drop trigger if exists prevent_client_plan_change on public.workspaces;
 create trigger prevent_client_plan_change
-before update of plan on public.workspaces
+before update of plan, owner_id on public.workspaces
 for each row execute function private.prevent_client_plan_change();
 
 -- Free workspaces may keep archived projects, but may have only one active
