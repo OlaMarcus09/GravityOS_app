@@ -31,6 +31,7 @@ function Icon({ path, size = 18 }: { path: string; size?: number }) {
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: "M4 13h6V4H4v9Zm0 7h6v-5H4v5Zm10 0h6v-9h-6v9Zm0-16v5h6V4h-6Z" },
+  { href: "/analytics", label: "Analytics", icon: "M4 19V5m0 14h16M8 16v-4m4 4V8m4 8V4m4 12v-6" },
   { href: "/calendar", label: "Calendar", icon: "M8 2v4M16 2v4M3 10h18M5 6h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1Z" },
   { href: "/tasks", label: "Tasks", icon: "M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" },
   { href: "/projects", label: "Projects", icon: "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 0v20M2 12h20" },

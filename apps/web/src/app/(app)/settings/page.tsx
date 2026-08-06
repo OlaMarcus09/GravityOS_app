@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { useMe, useProfileMutation } from "@/lib/queries/useMe";
@@ -274,6 +275,9 @@ export default function SettingsPage() {
               </div>
               {!isReadOnly && (
                 <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                  <Link href="/analytics" className="button-link" style={{ padding: "0.35rem 0.65rem", fontSize: "0.8rem" }}>
+                    View analytics
+                  </Link>
                   <Button
                     size="sm"
                     onClick={() => streamingMutations.sync.mutate(streamingLink.data!.id)}

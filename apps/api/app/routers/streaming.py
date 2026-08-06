@@ -184,6 +184,24 @@ def get_streaming_summary(
     return list(latest.values())
 
 
+@router.get("/history")
+def get_streaming_history(
+    ctx: WorkspaceContext = Depends(get_workspace_context),
+    limit: int = Query(default=500, ge=1, le=1000),
+) -> list[dict[str, Any]]:
+    """Return stored snapshots for charts without calling Soundcharts."""
+    return (
+        ctx.db.table("streaming_snapshots")
+        .select("*")
+        .eq("workspace_id", ctx.workspace_id)
+        .order("captured_at", desc=False)
+        .limit(limit)
+        .execute()
+        .data
+        or []
+    )
+
+
 @router.post("/link/{link_id}/sync")
 def sync_artist_stats(
     link_id: str,

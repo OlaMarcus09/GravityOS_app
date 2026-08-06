@@ -254,6 +254,7 @@ export const streamingApi = {
     workspaceId: ws,
   }),
   summary: (ws: string) => apiFetch<StreamingSnapshot[]>("/streaming/summary", { workspaceId: ws }),
+  history: (ws: string, limit = 500) => apiFetch<StreamingSnapshot[]>(`/streaming/history?limit=${limit}`, { workspaceId: ws }),
   sync: (ws: string, linkId: string) => apiFetch<{ synced_at: string; snapshots_written: number }>(
     `/streaming/link/${linkId}/sync`,
     { method: "POST", workspaceId: ws },

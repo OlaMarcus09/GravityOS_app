@@ -219,9 +219,11 @@ manage artist links. A manual, writer-only sync route calls
 `GET /api/v2/artist/{uuid}/current/stats?period=7`, normalizes the social,
 streaming, popularity, retention, and score groups, and writes snapshots with
 the service role. Settings exposes artist connection, manual sync, and a compact
-latest-metric summary to every workspace plan. Scheduled polling, artist search,
-historical audience and playlist endpoints, the full analytics dashboard, and
-Gravity Score integration are deferred.
+latest-metric summary to every workspace plan. `/analytics` adds a responsive
+workspace dashboard backed only by stored snapshots: connection health, latest
+signals, platform/group filters, and trend visualization do not call Soundcharts
+on page load. Scheduled polling, artist search, historical audience and playlist
+endpoints, and Gravity Score integration are deferred.
 
 ### Proactive notifications and email
 
@@ -600,10 +602,10 @@ These items describe the current engineering boundary, not completed behavior:
     exist, but rollup UI, organization admin routes, SSO/SAML, billing, and audit
     logs are deferred.
 11. **Soundcharts analytics:** identity links, snapshot storage, settings,
-    manual current-stats sync, and a compact latest-metric summary now exist.
-    Scheduled polling, artist search, historical/playlist endpoints, the full
-    analytics dashboard, and Gravity Score integration are deferred. Access is
-    not plan-gated yet.
+    manual current-stats sync, compact settings summary, and a stored-snapshot
+    analytics dashboard now exist. Scheduled polling, artist search,
+    historical/playlist endpoints, and Gravity Score integration are deferred.
+    Access is not plan-gated yet.
 12. **Operational readiness:** observability, structured logging, rate limiting,
     backups/restore drills, production smoke tests, and documented incident
     procedures are not yet represented in the repository.

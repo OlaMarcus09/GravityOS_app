@@ -14,6 +14,8 @@ Last updated: 2026-08-06
 - Mobile PWA layout fix: `2bd9553 fix: stabilize mobile comments and notifications`.
 - Manual Soundcharts sync: `c723076 feat: enable manual soundcharts metric sync`.
 - Empty Soundcharts connection fix: `2c4018c fix: handle empty soundcharts connections`.
+- Security hardening: `351e60f security: harden plans uploads and runtime`.
+- Workspace ownership trigger fix: `b51bc4f fix: protect workspace ownership updates`.
 - The free GitHub Actions scheduler replacement follows that foundation; no paid
   Render cron job is required.
 
@@ -43,7 +45,7 @@ comments, approval control, notifications, and an accountable activity history.
 - Stale email-delivery lease recovery so interrupted workers cannot strand mail.
 - Professional notification email footers link directly to Settings preferences.
 - Soundcharts artist connection, cost-controlled manual current-stats sync, and
-  latest imported metric summaries for every workspace plan.
+  a responsive stored-snapshot analytics dashboard for every workspace plan.
 - GitHub Actions CI for the full API suite, frontend typecheck/build, and
   Playwright smoke checks across desktop, mobile, and tablet viewports.
 - Verified member email display and filterable workspace activity.
@@ -62,6 +64,8 @@ comments, approval control, notifications, and an accountable activity history.
 - `0019_enterprise_plan.sql` (applied 2026-08-05)
 - `0020_enterprise_foundations.sql` (applied 2026-08-05)
 - `0021_proactive_notifications.sql` (applied 2026-08-05)
+- `0022_plan_enforcement.sql` (applied 2026-08-06)
+- `0023_catalogue_storage_limits.sql` (applied 2026-08-06)
 
 Migrations `0015`, `0016`, and `0017` have been applied in the active Supabase
 project. `0017` protects approval columns from direct PostgREST writes, adds
@@ -83,13 +87,16 @@ database has older timestamped migration-history entries from earlier manual
 deployments; the three new migrations were applied directly and recorded in the
 history table without rewriting those entries.
 
+Migrations `0022` and `0023` were applied in production on 2026-08-06. They
+enforce Free-plan limits and paid-feature writes at the database boundary and
+cap the Catalogue Storage bucket at 500 MB.
+
 ## Validation
 
-- API suite: 135 tests passed.
+- API suite: 149 tests passed, including 8/8 focused streaming tests.
 - Frontend typecheck passed after the responsive/onboarding changes.
-- Frontend production build compiled, validated types, and generated all 20 routes
-  on Next.js `14.2.35`; the local process required interruption after printing the
-  completed route manifest during trace shutdown.
+- Frontend production build compiled, validated types, and generated all 21 routes
+  on Next.js `16.3.0`, including `/analytics`.
 - `git diff --check` passed.
 - Playwright smoke coverage is configured for desktop Chrome, iPhone-sized, and
   iPad-sized viewports. The local macOS 11 machine cannot launch current bundled
@@ -136,9 +143,9 @@ Start the next session here:
 1. Confirm Vercel and Render deploy through `2c4018c`, then retest the iOS task
    comment keyboard layout, compact Android notification panel, PWA manifest,
    notification task links, preference feedback, and email worker health.
-2. Add `SOUNDCHARTS_APP_ID` and `SOUNDCHARTS_API_KEY` directly in Render, connect
-   a test artist UUID in Settings, and run one manual sync. A 401/403 from the
-   upstream call means the account does not include the premium current-stats endpoint.
+2. Open the dedicated Soundcharts Analytics page after a manual sync and verify
+   latest signals, metric/platform filters, and responsive trend charts. A 401/403
+   from sync means the account does not include the premium current-stats endpoint.
 3. Confirm the first `CI` workflow run is green in GitHub Actions. Keep the
    notification-reminder workflow separate; it continues running every five minutes.
 4. Once the current ISP/Vercel routing issue is bypassed, run API health, production CORS,

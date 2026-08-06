@@ -20,12 +20,21 @@ export function useStreamingSummary(workspaceId: string | null) {
   });
 }
 
+export function useStreamingHistory(workspaceId: string | null) {
+  return useQuery({
+    queryKey: ["streaming-history", workspaceId],
+    queryFn: () => streamingApi.history(workspaceId!),
+    enabled: Boolean(workspaceId),
+  });
+}
+
 export function useStreamingMutations(workspaceId: string | null) {
   const queryClient = useQueryClient();
   const refresh = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["streaming-link", workspaceId] }),
       queryClient.invalidateQueries({ queryKey: ["streaming-summary", workspaceId] }),
+      queryClient.invalidateQueries({ queryKey: ["streaming-history", workspaceId] }),
     ]);
   };
   return {

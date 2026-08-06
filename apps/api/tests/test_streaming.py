@@ -13,6 +13,7 @@ from app.routers.streaming import (
     _enforce_sync_cooldown,
     _snapshot_rows,
     get_artist_link,
+    get_streaming_history,
     get_streaming_summary,
     sync_artist_stats,
 )
@@ -172,3 +173,18 @@ def test_streaming_summary_returns_latest_metric_per_platform() -> None:
     result = get_streaming_summary(_context(db), limit=200)
 
     assert [row["id"] for row in result] == ["new", "social"]
+
+
+def test_streaming_history_returns_stored_snapshots_in_chart_order() -> None:
+    rows = [
+        {"id": "old", "metric_type": "streaming", "platform": "spotify"},
+        {"id": "new", "metric_type": "streaming", "platform": "spotify"},
+    ]
+    db = Mock()
+    query = _query(rows)
+    db.table.return_value = query
+
+    assert get_streaming_history(_context(db), limit=500) == rows
+    query.eq.assert_called_once_with("workspace_id", "workspace-1")
+    query.order.assert_called_once_with("captured_at", desc=False)
+    query.limit.assert_called_once_with(500)
