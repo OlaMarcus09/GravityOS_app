@@ -11,6 +11,8 @@ Last updated: 2026-08-06
 - GitHub `main` is the product/deployment branch; `app/master` is stale.
 - Foundation commit: `c510bcb feat: add enterprise and proactive notification foundations`.
 - Pilot readiness commit: `0fae318 feat: finish pilot notification and pwa readiness`.
+- Mobile PWA layout fix: `2bd9553 fix: stabilize mobile comments and notifications`.
+- Manual Soundcharts sync: `c723076 feat: enable manual soundcharts metric sync`.
 - The free GitHub Actions scheduler replacement follows that foundation; no paid
   Render cron job is required.
 
@@ -127,8 +129,9 @@ history table without rewriting those entries.
 
 Start the next session here:
 
-1. Confirm Vercel and Render deploy `0fae318`, then verify the manifest,
-   notification task links, preference feedback, and email worker health in production.
+1. Confirm Vercel and Render deploy through `c723076`, then retest the iOS task
+   comment keyboard layout, compact Android notification panel, PWA manifest,
+   notification task links, preference feedback, and email worker health.
 2. Add `SOUNDCHARTS_APP_ID` and `SOUNDCHARTS_API_KEY` directly in Render, connect
    a test artist UUID in Settings, and run one manual sync. A 401/403 from the
    upstream call means the account does not include the premium current-stats endpoint.
