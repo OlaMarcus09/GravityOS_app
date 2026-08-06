@@ -575,13 +575,14 @@ These items describe the current engineering boundary, not completed behavior:
    collaboration, task behavior, permissions, security hardening, tenant
    references, catalogue contracts, and public error responses. Broader CRUD,
    RLS, dashboard aggregation, and clean-database integration coverage remains.
-   The frontend has Playwright smoke coverage for public/auth entry points and
-   desktop, mobile, and tablet projects. Broader authenticated workflow coverage
-   and repeatable CI execution remain gaps.
+   GitHub Actions runs the full API suite plus frontend typechecking, a clean
+   production build, and Playwright smoke coverage for desktop, mobile, and
+   tablet projects. Broader authenticated workflow and clean-database integration
+   coverage remain gaps.
 5. **Frontend build health:** source-only typechecking now passes through the
    dedicated `apps/web/tsconfig.typecheck.json` project (generated `.next`
-   types are excluded). The production build still needs CI/clean-install
-   verification; local `next build` can stall during optimized compilation.
+   types are excluded). CI performs clean-install build verification on Linux;
+   local `next build` can still linger during trace shutdown on older macOS.
 6. **Catalogue lifecycle verification:** storage paths are collision-resistant
    and deletion removes the object before metadata, but the binary lifecycle still
    needs verification against the deployed Supabase bucket.

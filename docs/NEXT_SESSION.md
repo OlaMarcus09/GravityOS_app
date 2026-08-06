@@ -13,6 +13,7 @@ Last updated: 2026-08-06
 - Pilot readiness commit: `0fae318 feat: finish pilot notification and pwa readiness`.
 - Mobile PWA layout fix: `2bd9553 fix: stabilize mobile comments and notifications`.
 - Manual Soundcharts sync: `c723076 feat: enable manual soundcharts metric sync`.
+- Empty Soundcharts connection fix: `2c4018c fix: handle empty soundcharts connections`.
 - The free GitHub Actions scheduler replacement follows that foundation; no paid
   Render cron job is required.
 
@@ -42,6 +43,8 @@ comments, approval control, notifications, and an accountable activity history.
 - Stale email-delivery lease recovery so interrupted workers cannot strand mail.
 - Soundcharts artist connection, cost-controlled manual current-stats sync, and
   latest imported metric summaries for every workspace plan.
+- GitHub Actions CI for the full API suite, frontend typecheck/build, and
+  Playwright smoke checks across desktop, mobile, and tablet viewports.
 - Verified member email display and filterable workspace activity.
 
 ## Supabase migrations
@@ -129,25 +132,27 @@ history table without rewriting those entries.
 
 Start the next session here:
 
-1. Confirm Vercel and Render deploy through `c723076`, then retest the iOS task
+1. Confirm Vercel and Render deploy through `2c4018c`, then retest the iOS task
    comment keyboard layout, compact Android notification panel, PWA manifest,
    notification task links, preference feedback, and email worker health.
 2. Add `SOUNDCHARTS_APP_ID` and `SOUNDCHARTS_API_KEY` directly in Render, connect
    a test artist UUID in Settings, and run one manual sync. A 401/403 from the
    upstream call means the account does not include the premium current-stats endpoint.
-3. Once the current ISP/Vercel routing issue is bypassed, run API health, production CORS,
+3. Confirm the first `CI` workflow run is green in GitHub Actions. Keep the
+   notification-reminder workflow separate; it continues running every five minutes.
+4. Once the current ISP/Vercel routing issue is bypassed, run API health, production CORS,
    invitation-link, and browser network checks against the actual dashboard URLs.
-4. Send a disposable-account assignment, mention, approval, and due-date reminder;
+5. Send a disposable-account assignment, mention, approval, and due-date reminder;
    confirm one in-app record and one professional email for each enabled event.
-5. Live-test that approval marks a task `Approved · Completed`, while rejection
+6. Live-test that approval marks a task `Approved · Completed`, while rejection
    reopens it for editing/resubmission and retains the decision history.
-6. Run a live two-workspace isolation check and confirm platform-admin support and
+7. Run a live two-workspace isolation check and confirm platform-admin support and
    plan-audit sections in production.
-7. Seed and rehearse the guided demo workspace for artist managers and label owners.
-8. On a current device/browser, verify laptop 1440×900 and 1280×800, iPad portrait
+8. Seed and rehearse the guided demo workspace for artist managers and label owners.
+9. On a current device/browser, verify laptop 1440×900 and 1280×800, iPad portrait
    and landscape, and mobile Safari/Chrome. Use a disposable email to rehearse the
    owner → Admin invitation flow before inviting the artist's real assistant.
-9. If production is green, run the complete pilot rehearsal: Owner creates task →
+10. If production is green, run the complete pilot rehearsal: Owner creates task →
    team member submits → Admin reviews → approval completes the task, while
    rejection reopens it for correction and resubmission.
 
