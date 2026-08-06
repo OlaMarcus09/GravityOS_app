@@ -24,6 +24,13 @@ def test_notification_template_escapes_dynamic_html() -> None:
     assert "Gravity OS" in email.text
 
 
+def test_notification_template_links_directly_to_settings() -> None:
+    email = render_notification_email(subject="Reminder", title="Due soon", message="Review it")
+
+    assert "/settings" in email.html
+    assert "/settings" in email.text
+
+
 def test_resend_client_sends_auth_and_idempotency_headers() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.url.path == "/emails"

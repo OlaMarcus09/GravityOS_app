@@ -33,6 +33,7 @@ def render_notification_email(
     action_label: str = "Open Gravity OS",
 ) -> RenderedEmail:
     """Render a deliberately small template, escaping every dynamic value."""
+    settings = get_settings()
     safe_subject = subject.strip()
     safe_title = escape(title.strip())
     safe_message = escape(message.strip()).replace("\n", "<br>")
@@ -48,6 +49,13 @@ def render_notification_email(
             f'font-weight:600">{safe_label}</a></p>'
         )
         text_action = f"\n\n{action_label.strip()}: {action_url}"
+    preferences_url = f"{settings.web_app_url.rstrip('/')}/settings" if settings.web_app_url else None
+    safe_preferences_url = escape(preferences_url, quote=True) if preferences_url else None
+    preferences_link = (
+        f'<a href="{safe_preferences_url}" style="color:#71717a">Manage notification preferences</a>'
+        if safe_preferences_url
+        else "Manage notification preferences in Gravity OS"
+    )
 
     html = (
         '<!doctype html><html><body style="margin:0;background:#f4f4f5;'
@@ -60,12 +68,13 @@ def render_notification_email(
         f'<p style="margin:0;line-height:1.6;color:#52525b">{safe_message}</p>'
         f"{button}"
         '<p style="margin:28px 0 0;font-size:12px;color:#71717a">'
-        "You received this because notifications are enabled for your Gravity OS account."
+        "You received this because notifications are enabled for your Gravity OS account. "
+        f"{preferences_link}."
         "</p></div></div></body></html>"
     )
     text = (
         f"Gravity OS\n\n{title.strip()}\n\n{message.strip()}"
-        f"{text_action}\n\nManage notification preferences in Gravity OS."
+        f"{text_action}\n\nManage notification preferences: {preferences_url or 'Gravity OS Settings'}"
     )
     return RenderedEmail(subject=safe_subject, html=html, text=text)
 

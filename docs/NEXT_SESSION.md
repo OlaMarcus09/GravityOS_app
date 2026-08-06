@@ -41,6 +41,7 @@ comments, approval control, notifications, and an accountable activity history.
 - Task-specific notification links that focus the affected task.
 - Persistent desktop/mobile notification chrome with accessible dismissal.
 - Stale email-delivery lease recovery so interrupted workers cannot strand mail.
+- Professional notification email footers link directly to Settings preferences.
 - Soundcharts artist connection, cost-controlled manual current-stats sync, and
   latest imported metric summaries for every workspace plan.
 - GitHub Actions CI for the full API suite, frontend typecheck/build, and

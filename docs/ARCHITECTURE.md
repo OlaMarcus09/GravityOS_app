@@ -236,7 +236,9 @@ scheduled GitHub Actions workflow calls a secret-protected internal API endpoint
 every five minutes. The endpoint creates timezone-aware task reminders from
 profile timezones and delivers pending messages through Resend. Supabase Custom
 SMTP separately owns signup, reset, confirmation, and workspace invitation email
-so invitations are not duplicated by the application outbox. Web Push, mobile
+so invitations are not duplicated by the application outbox. Notification email
+footers link directly to the deployed Settings page for preference management.
+Web Push, mobile
 push, weekly digests, and delivery webhooks are deferred.
 
 The delivery worker treats `processing` outbox rows as leased work. Claims older
