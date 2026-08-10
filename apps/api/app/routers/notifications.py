@@ -21,6 +21,9 @@ class NotificationPreferencesUpdate(BaseModel):
     mentions: bool = True
     approval_updates: bool = True
     deadline_reminders: bool = True
+    activation_nudges: bool = True
+    weekly_digests: bool = True
+    dormant_checkins: bool = True
     reminder_days_before: list[int] = Field(
         default_factory=lambda: DEFAULT_REMINDER_DAYS.copy(), min_length=1, max_length=10
     )

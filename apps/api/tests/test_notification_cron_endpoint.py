@@ -40,7 +40,7 @@ def test_notification_cron_rejects_invalid_key() -> None:
 def test_notification_cron_runs_cycle_with_valid_key() -> None:
     with patch(
         "app.main.run_notification_cycle",
-        return_value={"queued": 2, "sent": 3, "failed": 0},
+        return_value={"queued": 2, "queued_deadlines": 2, "queued_activation": 0, "queued_digest": 0, "queued_dormant": 0, "sent": 3, "failed": 0},
     ) as run:
         response = _client("correct-secret").post(
             "/internal/notifications/run",
@@ -48,5 +48,5 @@ def test_notification_cron_runs_cycle_with_valid_key() -> None:
         )
 
     assert response.status_code == 200
-    assert response.json() == {"queued": 2, "sent": 3, "failed": 0}
+    assert response.json() == {"queued": 2, "queued_deadlines": 2, "queued_activation": 0, "queued_digest": 0, "queued_dormant": 0, "sent": 3, "failed": 0}
     run.assert_called_once_with()

@@ -10,6 +10,9 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from app.core.db import get_service_client
 from app.integrations.resend import ResendClient, render_notification_email
 from app.services.notifications import create_notification
+from app.jobs.activation import generate_activation_nudges
+from app.jobs.digest import generate_weekly_digests
+from app.jobs.dormant_checkin import generate_dormant_checkins
 
 EMAIL_DELIVERY_LEASE = timedelta(minutes=15)
 
@@ -219,12 +222,22 @@ def deliver_pending_emails(
 
 
 def run_notification_cycle() -> dict[str, int]:
-    """Generate reminders and drain the due email outbox for cron execution."""
+    """Generate retention/deadline messages and drain the due email outbox."""
     service = get_service_client()
-    queued = generate_deadline_reminders(service=service)
+    queued_deadlines = generate_deadline_reminders(service=service)
+    queued_activation = generate_activation_nudges(service=service)
+    queued_digest = generate_weekly_digests(service=service)
+    queued_dormant = generate_dormant_checkins(service=service)
     with ResendClient() as resend:
         delivered = deliver_pending_emails(service=service, resend=resend)
-    return {"queued": queued, **delivered}
+    return {
+        "queued": queued_deadlines + queued_activation + queued_digest + queued_dormant,
+        "queued_deadlines": queued_deadlines,
+        "queued_activation": queued_activation,
+        "queued_digest": queued_digest,
+        "queued_dormant": queued_dormant,
+        **delivered,
+    }
 
 
 def main() -> None:

@@ -209,6 +209,9 @@ export type NotificationPreferences = {
   mentions: boolean;
   approval_updates: boolean;
   deadline_reminders: boolean;
+  activation_nudges: boolean;
+  weekly_digests: boolean;
+  dormant_checkins: boolean;
   reminder_days_before: number[];
 };
 

@@ -34,6 +34,9 @@ def test_preferences_return_enabled_defaults_before_first_save() -> None:
     assert result["user_id"] == "user-1"
     assert result["email_enabled"] is True
     assert result["deadline_reminders"] is True
+    assert result["activation_nudges"] is True
+    assert result["weekly_digests"] is True
+    assert result["dormant_checkins"] is True
     assert result["reminder_days_before"] == [3, 1, 0]
 
 

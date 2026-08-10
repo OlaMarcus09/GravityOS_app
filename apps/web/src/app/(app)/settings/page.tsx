@@ -202,6 +202,9 @@ export default function SettingsPage() {
               ["mentions", "Mentions", "When someone mentions you in a comment."],
               ["approval_updates", "Approval updates", "Review requests, approvals, and rejections."],
               ["deadline_reminders", "Deadline reminders", "Reminders before tasks become due."],
+              ["activation_nudges", "Getting-started nudges", "One practical prompt when a new workspace is still empty."],
+              ["weekly_digests", "Weekly digest", "A useful weekly summary when your workspace has activity."],
+              ["dormant_checkins", "Activity check-ins", "One contextual reminder after a period away."],
             ] as const).map(([key, label, description]) => (
               <label key={key} style={{ display: "flex", alignItems: "flex-start", gap: "0.7rem", cursor: "pointer" }}>
                 <input

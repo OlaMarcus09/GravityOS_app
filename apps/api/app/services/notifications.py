@@ -16,6 +16,9 @@ PREFERENCE_BY_KIND = {
     "task_approved": "approval_updates",
     "task_rejected": "approval_updates",
     "task_deadline_reminder": "deadline_reminders",
+    "activation_nudge": "activation_nudges",
+    "weekly_digest": "weekly_digests",
+    "dormant_checkin": "dormant_checkins",
 }
 
 

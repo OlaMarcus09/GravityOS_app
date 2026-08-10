@@ -240,8 +240,10 @@ profile timezones and delivers pending messages through Resend. Supabase Custom
 SMTP separately owns signup, reset, confirmation, and workspace invitation email
 so invitations are not duplicated by the application outbox. Notification email
 footers link directly to the deployed Settings page for preference management.
-Web Push, mobile
-push, weekly digests, and delivery webhooks are deferred.
+Activation nudges, non-empty weekly digests, and contextual dormant-user
+check-ins use the same outbox and Resend path. Digests run in each user's local
+Monday morning window; dormant check-ins are bounded to one per dormancy period.
+Web Push, mobile push, and delivery webhooks are deferred.
 
 The delivery worker treats `processing` outbox rows as leased work. Claims older
 than 15 minutes are released for retry, or cancelled when their bounded attempt

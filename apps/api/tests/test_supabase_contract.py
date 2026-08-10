@@ -278,3 +278,16 @@ def test_email_delivery_outbox_is_retryable_idempotent_and_service_owned():
     assert "alter table public.email_deliveries enable row level security" in sql
     assert "revoke all on public.email_deliveries from anon, authenticated" in sql
     assert "create policy email_deliveries" not in sql
+
+
+def test_retention_checkins_are_service_owned_and_deduplicated():
+    sql = migration("0024_retention_checkins.sql").lower()
+
+    assert "alter table public.notification_preferences" in sql
+    assert "activation_nudges boolean not null default true" in sql
+    assert "weekly_digests boolean not null default true" in sql
+    assert "dormant_checkins boolean not null default true" in sql
+    assert "create table public.retention_checkins" in sql
+    assert "dedupe_key         text not null unique" in sql
+    assert "retention_checkins_user_period_uidx" in sql
+    assert "revoke all on public.retention_checkins from anon, authenticated" in sql

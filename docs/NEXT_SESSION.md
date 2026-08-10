@@ -46,6 +46,8 @@ comments, approval control, notifications, and an accountable activity history.
 - Professional notification email footers link directly to Settings preferences.
 - Soundcharts artist connection, cost-controlled manual current-stats sync, and
   a responsive stored-snapshot analytics dashboard for every workspace plan.
+- Retention outreach jobs for activation nudges, non-empty weekly digests, and
+  bounded contextual dormant-user check-ins through the existing Resend outbox.
 - GitHub Actions CI for the full API suite, frontend typecheck/build, and
   Playwright smoke checks across desktop, mobile, and tablet viewports.
 - Verified member email display and filterable workspace activity.
@@ -66,6 +68,7 @@ comments, approval control, notifications, and an accountable activity history.
 - `0021_proactive_notifications.sql` (applied 2026-08-05)
 - `0022_plan_enforcement.sql` (applied 2026-08-06)
 - `0023_catalogue_storage_limits.sql` (applied 2026-08-06)
+- `0024_retention_checkins.sql` (pending production apply)
 
 Migrations `0015`, `0016`, and `0017` have been applied in the active Supabase
 project. `0017` protects approval columns from direct PostgREST writes, adds
@@ -163,6 +166,9 @@ Start the next session here:
 10. If production is green, run the complete pilot rehearsal: Owner creates task →
    team member submits → Admin reviews → approval completes the task, while
    rejection reopens it for correction and resubmission.
+11. Apply `0024_retention_checkins.sql`, manually dispatch the notification cycle,
+    and verify activation, digest, and dormant-check-in outbox rows with a
+    disposable account.
 
 The reusable seed, narrative, role setup, approval walkthrough, fallbacks, and
 reset checklist are in [docs/DEMO.md](DEMO.md).

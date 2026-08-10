@@ -240,6 +240,9 @@ def test_cron_cycle_generates_reminders_then_drains_outbox() -> None:
         patch("app.jobs.notifications.get_service_client", return_value=service),
         patch("app.jobs.notifications.ResendClient", return_value=resend_context),
         patch("app.jobs.notifications.generate_deadline_reminders", return_value=2) as generate,
+        patch("app.jobs.notifications.generate_activation_nudges", return_value=1) as activation,
+        patch("app.jobs.notifications.generate_weekly_digests", return_value=3) as digest,
+        patch("app.jobs.notifications.generate_dormant_checkins", return_value=4) as dormant,
         patch(
             "app.jobs.notifications.deliver_pending_emails",
             return_value={"sent": 3, "failed": 1},
@@ -247,6 +250,17 @@ def test_cron_cycle_generates_reminders_then_drains_outbox() -> None:
     ):
         result = run_notification_cycle()
 
-    assert result == {"queued": 2, "sent": 3, "failed": 1}
+    assert result == {
+        "queued": 10,
+        "queued_deadlines": 2,
+        "queued_activation": 1,
+        "queued_digest": 3,
+        "queued_dormant": 4,
+        "sent": 3,
+        "failed": 1,
+    }
     generate.assert_called_once_with(service=service)
+    activation.assert_called_once_with(service=service)
+    digest.assert_called_once_with(service=service)
+    dormant.assert_called_once_with(service=service)
     deliver.assert_called_once_with(service=service, resend=resend)
