@@ -38,7 +38,7 @@ def _date_in_timezone(value: str, timezone_name: str) -> date | None:
 
 
 def generate_weekly_digests(*, service: Any | None = None, now: datetime | None = None) -> int:
-    """Queue a useful digest once per user, during their Monday 09:00 hour."""
+    """Queue a personalized team digest once per user on Monday morning."""
     service = service or get_service_client()
     now = now or datetime.now(timezone.utc)
     preferences = service.table("notification_preferences").select("*").execute().data or []
@@ -52,9 +52,12 @@ def generate_weekly_digests(*, service: Any | None = None, now: datetime | None 
         return 0
     profiles = service.table("profiles").select("id,display_name,timezone").in_("id", user_ids).execute().data or []
     profiles_by_id = {row["id"]: row for row in profiles}
+    workspace_ids = list({workspace_id for memberships in user_workspaces.values() for workspace_id in memberships})
+    workspaces = service.table("workspaces").select("id,name").in_("id", workspace_ids).execute().data or []
+    workspace_name_by_id = {row["id"]: row.get("name") or "Workspace" for row in workspaces}
     cutoff = now - timedelta(days=8)
-    completed = service.table("tasks").select("workspace_id,title,completed_at").eq("status", "done").gte("completed_at", cutoff.isoformat()).execute().data or []
-    upcoming = service.table("tasks").select("id,workspace_id,title,due_date").neq("status", "done").gte("due_date", (now.date() - timedelta(days=1)).isoformat()).lte("due_date", (now.date() + timedelta(days=8)).isoformat()).execute().data or []
+    completed = service.table("tasks").select("workspace_id,title,assignee_id,completed_at").eq("status", "done").gte("completed_at", cutoff.isoformat()).execute().data or []
+    upcoming = service.table("tasks").select("id,workspace_id,title,assignee_id,due_date").neq("status", "done").gte("due_date", (now.date() - timedelta(days=1)).isoformat()).lte("due_date", (now.date() + timedelta(days=8)).isoformat()).execute().data or []
     scores = service.table("gravity_scores").select("workspace_id,overall,computed_at").gte("computed_at", (now - timedelta(days=8)).isoformat()).order("computed_at", desc=True).execute().data or []
     by_workspace_completed: dict[str, list[dict]] = {}
     by_workspace_upcoming: dict[str, list[dict]] = {}
@@ -82,43 +85,76 @@ def generate_weekly_digests(*, service: Any | None = None, now: datetime | None 
         local_today = _local_date(timezone_name, now)
         local_week_start = local_today - timedelta(days=7)
         local_horizon = local_today + timedelta(days=7)
-        completed_rows = [
-            row
-            for ws in workspace_ids
-            for row in by_workspace_completed.get(ws, [])
-            if row.get("completed_at")
-            and (completed_date := _date_in_timezone(row["completed_at"], timezone_name)) is not None
-            and local_week_start <= completed_date <= local_today
-        ]
-        upcoming_rows = [
-            row
-            for ws in workspace_ids
-            for row in by_workspace_upcoming.get(ws, [])
-            if row.get("due_date")
-            and local_today <= date.fromisoformat(row["due_date"]) <= local_horizon
-        ]
-        score_deltas: list[int] = []
-        for ws in workspace_ids:
-            history = by_workspace_scores.get(ws, [])
+        workspace_sections: list[str] = []
+        personal_completed_total = 0
+        personal_upcoming_total = 0
+        team_completed_total = 0
+        team_upcoming_total = 0
+        score_delta_total = 0
+        for workspace_id in workspace_ids:
+            completed_rows = [
+                row for row in by_workspace_completed.get(workspace_id, [])
+                if row.get("completed_at")
+                and (completed_date := _date_in_timezone(row["completed_at"], timezone_name)) is not None
+                and local_week_start <= completed_date <= local_today
+            ]
+            upcoming_rows = [
+                row for row in by_workspace_upcoming.get(workspace_id, [])
+                if row.get("due_date")
+                and local_today <= date.fromisoformat(row["due_date"]) <= local_horizon
+            ]
+            personal_completed = [row for row in completed_rows if row.get("assignee_id") == user_id]
+            personal_upcoming = [row for row in upcoming_rows if row.get("assignee_id") == user_id]
+            history = by_workspace_scores.get(workspace_id, [])
+            score_delta = 0
             if len(history) >= 2 and history[0].get("overall") is not None and history[-1].get("overall") is not None:
-                delta = int(history[0]["overall"]) - int(history[-1]["overall"])
-                if delta:
-                    score_deltas.append(delta)
-        if not completed_rows and not upcoming_rows and not score_deltas:
+                score_delta = int(history[0]["overall"]) - int(history[-1]["overall"])
+            if not completed_rows and not upcoming_rows and not score_delta:
+                continue
+
+            personal_completed_total += len(personal_completed)
+            personal_upcoming_total += len(personal_upcoming)
+            team_completed_total += len(completed_rows)
+            team_upcoming_total += len(upcoming_rows)
+            score_delta_total += score_delta
+            personal_parts = [
+                f"you completed {len(personal_completed)} assigned task{'s' if len(personal_completed) != 1 else ''}",
+                f"you have {len(personal_upcoming)} assigned task{'s' if len(personal_upcoming) != 1 else ''} due",
+            ]
+            team_parts = [
+                f"the team completed {len(completed_rows)} task{'s' if len(completed_rows) != 1 else ''}",
+                f"{len(upcoming_rows)} team task{'s are' if len(upcoming_rows) != 1 else ' is'} due",
+            ]
+            if score_delta:
+                team_parts.append(f"Gravity Score {'rose' if score_delta > 0 else 'fell'} by {abs(score_delta)}")
+            workspace_sections.append(
+                f"{workspace_name_by_id.get(workspace_id, 'Workspace')}: "
+                + "; ".join(personal_parts)
+                + ". Team overview: "
+                + "; ".join(team_parts)
+                + "."
+            )
+        if not workspace_sections:
             continue
-        sections = []
-        if completed_rows:
-            sections.append(f"{len(completed_rows)} task{'s' if len(completed_rows) != 1 else ''} completed")
-        if upcoming_rows:
-            sections.append(f"{len(upcoming_rows)} task{'s' if len(upcoming_rows) != 1 else ''} due in the next 7 days")
-        if score_deltas:
-            delta = sum(score_deltas)
-            sections.append(f"Gravity Score {'rose' if delta > 0 else 'fell'} by {abs(delta)}")
+        display_name = profiles_by_id.get(user_id, {}).get("display_name") or "there"
+        first_name = display_name.split()[0] if display_name.strip() else "there"
         result = create_notification(
             workspace_id=workspace_ids[0], recipient_id=user_id, kind="weekly_digest",
-            title="Your weekly Gravity OS digest", message="This week: " + "; ".join(sections) + ".",
-            action_url="/dashboard", metadata={"iso_week": f"{week_key.year}-W{week_key.week:02d}", "completed": len(completed_rows), "upcoming": len(upcoming_rows), "score_delta": sum(score_deltas) if score_deltas else 0},
-            dedupe_key=f"weekly-digest:{user_id}:{week_key.year}-W{week_key.week:02d}", subject="Your weekly Gravity OS digest", service=service,
+            title=f"{first_name}, your weekly Gravity OS digest",
+            message="Your work and team progress this week:\n\n" + "\n\n".join(workspace_sections),
+            action_url="/dashboard",
+            metadata={
+                "iso_week": f"{week_key.year}-W{week_key.week:02d}",
+                "workspace_count": len(workspace_sections),
+                "personal_completed": personal_completed_total,
+                "personal_upcoming": personal_upcoming_total,
+                "team_completed": team_completed_total,
+                "team_upcoming": team_upcoming_total,
+                "score_delta": score_delta_total,
+            },
+            dedupe_key=f"weekly-digest:{user_id}:{week_key.year}-W{week_key.week:02d}",
+            subject=f"{first_name}, your weekly Gravity OS digest",
+            service=service,
         )
         if result.notification_id or result.delivery_id:
             queued += 1

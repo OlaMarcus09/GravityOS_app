@@ -48,6 +48,8 @@ comments, approval control, notifications, and an accountable activity history.
   a responsive stored-snapshot analytics dashboard for every workspace plan.
 - Retention outreach jobs for activation nudges, non-empty weekly digests, and
   bounded contextual dormant-user check-ins through the existing Resend outbox.
+- Weekly digests personalize assigned-task counts for every recipient while
+  retaining a separate shared overview for each workspace/team.
 - GitHub Actions CI for the full API suite, frontend typecheck/build, and
   Playwright smoke checks across desktop, mobile, and tablet viewports.
 - Verified member email display and filterable workspace activity.

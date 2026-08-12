@@ -242,7 +242,9 @@ so invitations are not duplicated by the application outbox. Notification email
 footers link directly to the deployed Settings page for preference management.
 Activation nudges, non-empty weekly digests, and contextual dormant-user
 check-ins use the same outbox and Resend path. Digests run in each user's local
-Monday morning window; dormant check-ins are bounded to one per dormancy period.
+Monday morning window and separate each user's assigned-task summary from the
+shared overview for every workspace they belong to; dormant check-ins are
+bounded to one per dormancy period.
 Web Push, mobile push, and delivery webhooks are deferred.
 
 The delivery worker treats `processing` outbox rows as leased work. Claims older
