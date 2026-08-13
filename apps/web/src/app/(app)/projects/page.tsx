@@ -168,7 +168,7 @@ function ProjectForm({
   };
 
   return (
-    <>
+    <div className="project-form">
       <Field label="Title">
         <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Untitled release" autoFocus />
       </Field>
@@ -195,14 +195,14 @@ function ProjectForm({
         <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
       </Field>
       <ErrorText error={error} />
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "0.5rem" }}>
+      <div className="project-form-actions">
         <Button variant="ghost" onClick={onCancel}>
           Cancel
         </Button>
         <Button onClick={submit} disabled={pending || !title.trim()}>
-          {pending ? "Saving…" : "Save"}
+          {pending ? (initial ? "Saving…" : "Creating…") : (initial ? "Save changes" : "Create project")}
         </Button>
       </div>
-    </>
+    </div>
   );
 }

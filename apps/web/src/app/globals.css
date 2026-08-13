@@ -599,6 +599,20 @@ h2 {
   -webkit-overflow-scrolling: touch;
 }
 
+.project-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  min-height: min-content;
+}
+
+.project-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
 /* Invitation forms stay usable on phones instead of forcing horizontal scroll. */
 .team-invite-form {
   min-width: 0;
@@ -793,6 +807,17 @@ h2 {
   }
   .modal-content {
     padding: 1rem max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+  }
+  .project-form-actions {
+    position: sticky;
+    bottom: calc(-1rem - env(safe-area-inset-bottom));
+    z-index: 1;
+    margin: 0 -1rem calc(-1rem - env(safe-area-inset-bottom));
+    padding: 0.85rem 1rem calc(1rem + env(safe-area-inset-bottom));
+    background: linear-gradient(to bottom, transparent, var(--surface-solid) 24%);
+  }
+  .project-form-actions button {
+    flex: 1;
   }
   .modal-content input,
   .modal-content select,
