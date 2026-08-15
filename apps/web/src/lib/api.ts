@@ -574,6 +574,7 @@ export type Campaign = {
   start_date: string;
   end_date: string;
   project_id: string | null;
+  content_pieces?: ContentPiece[];
 };
 
 export type ContentPiece = {

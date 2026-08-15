@@ -614,6 +614,13 @@ h2 {
   margin-top: 0.5rem;
 }
 
+.release-plan-create-row {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  align-items: flex-end;
+}
+
 /* Invitation forms stay usable on phones instead of forcing horizontal scroll. */
 .team-invite-form {
   min-width: 0;
@@ -819,6 +826,14 @@ h2 {
   }
   .project-form-actions button {
     flex: 1;
+  }
+  .release-plan-create-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .release-plan-create-row input,
+  .release-plan-create-row button {
+    width: 100% !important;
   }
   .modal-content input,
   .modal-content select,

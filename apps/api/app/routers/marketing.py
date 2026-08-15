@@ -34,7 +34,11 @@ def list_campaigns(
     project_id: Optional[str] = Query(None),
     status_filter: Optional[str] = Query(None, alias="status"),
 ) -> list[dict]:
-    q = ctx.db.table("campaigns").select("*").eq("workspace_id", ctx.workspace_id)
+    q = (
+        ctx.db.table("campaigns")
+        .select("*, content_pieces(*)")
+        .eq("workspace_id", ctx.workspace_id)
+    )
     if project_id:
         q = q.eq("project_id", project_id)
     if status_filter:

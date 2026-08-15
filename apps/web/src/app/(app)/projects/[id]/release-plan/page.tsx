@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { use, useState } from "react";
 
 import type { Milestone, MilestoneInput, ReleasePlan } from "@/lib/api";
 import { useProject } from "@/lib/queries/useProjects";
@@ -33,8 +33,8 @@ function milestonesOf(plan: ReleasePlan | null): Milestone[] {
   return [...m].sort((a, b) => a.position - b.position);
 }
 
-export default function ReleasePlanPage({ params }: { params: { id: string } }) {
-  const projectId = params.id;
+export default function ReleasePlanPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id: projectId } = use(params);
   const { isReadOnly, plan: wsPlan } = useWorkspace();
   const { data: project } = useProject(projectId);
   const { data: plan, isLoading, error } = useReleasePlan(projectId);
@@ -84,6 +84,7 @@ export default function ReleasePlanPage({ params }: { params: { id: string } }) 
         <NoPlan
           isReadOnly={isReadOnly}
           pending={createPlan.isPending}
+          error={createPlan.error}
           defaultDate={project?.target_release_date ?? ""}
           onCreate={(release_date) => createPlan.mutate({ release_date })}
         />
@@ -217,11 +218,13 @@ export default function ReleasePlanPage({ params }: { params: { id: string } }) 
 function NoPlan({
   isReadOnly,
   pending,
+  error,
   defaultDate,
   onCreate,
 }: {
   isReadOnly: boolean;
   pending: boolean;
+  error: Error | null;
   defaultDate: string;
   onCreate: (releaseDate: string) => void;
 }) {
@@ -233,8 +236,8 @@ function NoPlan({
         Set a release date to start mapping milestones.
       </p>
       {!isReadOnly && (
-        <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center", alignItems: "flex-end" }}>
-          <div style={{ textAlign: "left" }}>
+        <div className="release-plan-create-row">
+          <div style={{ textAlign: "left", minWidth: 0 }}>
             <Field label="Release date">
               <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ width: 170 }} />
             </Field>
@@ -244,6 +247,7 @@ function NoPlan({
           </Button>
         </div>
       )}
+      <ErrorText error={error} />
     </Card>
   );
 }
