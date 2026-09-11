@@ -4,6 +4,7 @@ from unittest.mock import Mock
 
 from app.core.auth import AuthContext
 from app.core.deps import WorkspaceContext
+from app.routers.budgets import list_budgets
 from app.routers.marketing import list_campaigns
 from app.routers.releases import get_release_plan
 
@@ -34,6 +35,17 @@ def test_campaign_list_includes_nested_content_pieces() -> None:
 
     assert list_campaigns(ctx=_context(db), project_id=None, status_filter=None) == rows
     query.select.assert_called_once_with("*, content_pieces(*)")
+    query.eq.assert_called_once_with("workspace_id", "workspace-1")
+
+
+def test_budget_list_includes_nested_line_items() -> None:
+    rows = [{"id": "budget-1", "budget_items": [{"id": "item-1"}]}]
+    query = _query(rows)
+    db = Mock()
+    db.table.return_value = query
+
+    assert list_budgets(ctx=_context(db), project_id=None) == rows
+    query.select.assert_called_once_with("*, budget_items(*)")
     query.eq.assert_called_once_with("workspace_id", "workspace-1")
 
 

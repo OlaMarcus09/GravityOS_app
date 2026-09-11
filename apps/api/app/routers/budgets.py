@@ -40,7 +40,7 @@ def list_budgets(
     ctx: WorkspaceContext = Depends(get_workspace_context),
     project_id: Optional[str] = Query(None),
 ) -> list[dict]:
-    q = ctx.db.table("budgets").select("*").eq("workspace_id", ctx.workspace_id)
+    q = ctx.db.table("budgets").select("*, budget_items(*)").eq("workspace_id", ctx.workspace_id)
     if project_id:
         q = q.eq("project_id", project_id)
     return q.order("created_at", desc=True).execute().data or []
