@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import type { Budget, BudgetInput, BudgetItem, BudgetItemInput } from "@/lib/api";
+import { budgetProgress } from "@/lib/budget";
 import { useBudgets, useBudgetMutations } from "@/lib/queries/useBudgets";
 import { useWorkspace } from "@/lib/workspace";
 import {
@@ -30,20 +31,9 @@ function money(amount: string | number | null, currency = "USD") {
   }
 }
 
-// Sum a budget's item planned/actual amounts for the progress summary.
-function totals(items: BudgetItem[]) {
-  return items.reduce(
-    (acc, it) => {
-      acc.planned += parseFloat(it.planned_amount) || 0;
-      acc.actual += parseFloat(it.actual_amount ?? "0") || 0;
-      return acc;
-    },
-    { planned: 0, actual: 0 },
-  );
-}
-
 // The API returns budgets but items may arrive on a nested field; normalize.
 type BudgetWithItems = Budget & { budget_items?: BudgetItem[]; items?: BudgetItem[] };
+type ItemEditor = { budgetId: string; item: BudgetItem | null };
 
 function itemsOf(b: BudgetWithItems): BudgetItem[] {
   return b.budget_items ?? b.items ?? [];
@@ -56,7 +46,7 @@ export default function BudgetPage() {
 
   const [budgetOpen, setBudgetOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
-  const [itemFor, setItemFor] = useState<string | null>(null);
+  const [itemEditor, setItemEditor] = useState<ItemEditor | null>(null);
 
   const openCreateBudget = () => {
     setEditingBudget(null);
@@ -70,8 +60,14 @@ export default function BudgetPage() {
   };
 
   const submitItem = (body: BudgetItemInput) => {
-    if (!itemFor) return;
-    addItem.mutate({ budgetId: itemFor, body }, { onSuccess: () => setItemFor(null), onError: (e) => setMutationError(e) });
+    if (!itemEditor) return;
+    const onSuccess = () => { setItemEditor(null); setMutationError(null); };
+    const onError = (e: Error) => setMutationError(e);
+    if (itemEditor.item) {
+      updateItem.mutate({ itemId: itemEditor.item.id, body }, { onSuccess, onError });
+    } else {
+      addItem.mutate({ budgetId: itemEditor.budgetId, body }, { onSuccess, onError });
+    }
   };
   const [mutationError, setMutationError] = useState<Error | null>(null);
 
@@ -98,20 +94,18 @@ export default function BudgetPage() {
       <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
         {budgets.map((b) => {
           const items = itemsOf(b);
-          const t = totals(items);
-          const pct = t.planned > 0 ? Math.min(100, Math.round((t.actual / t.planned) * 100)) : 0;
-          const over = t.actual > t.planned && t.planned > 0;
+          const { actual, percent: pct, over } = budgetProgress(items);
           return (
             <Card key={b.id} style={{ padding: "1.1rem 1.25rem" }}>
               <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "0.75rem" }}>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: "1.05rem" }}>{b.name}</div>
                   <div style={{ fontSize: "0.82rem", color: "var(--muted)", marginTop: "0.15rem" }}>
-                    {money(t.actual, b.currency)} spent of {money(b.total_amount, b.currency)} budget
+                    {money(actual, b.currency)} spent of {money(b.total_amount, b.currency)} budget
                   </div>
                 </div>
                 {!isReadOnly && (
-                  <Button size="sm" variant="ghost" onClick={() => setItemFor(b.id)}>
+                  <Button size="sm" variant="ghost" onClick={() => { setMutationError(null); setItemEditor({ budgetId: b.id, item: null }); }}>
                     + Line item
                   </Button>
                 )}
@@ -145,15 +139,39 @@ export default function BudgetPage() {
                         borderRadius: "var(--radius-sm)",
                       }}
                     >
-                      <Badge>{it.category}</Badge>
-                      <span style={{ flex: 1, minWidth: 0, fontSize: "0.85rem" }}>{it.label}</span>
-                      <span style={{ fontSize: "0.82rem", color: "var(--muted)" }}>
-                        {money(it.actual_amount, b.currency)} / {money(it.planned_amount, b.currency)}
-                      </span>
+                      <button
+                        type="button"
+                        disabled={isReadOnly}
+                        aria-label={`Edit ${it.label}`}
+                        onClick={() => { setMutationError(null); setItemEditor({ budgetId: b.id, item: it }); }}
+                        style={{
+                          flex: 1,
+                          minWidth: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.6rem",
+                          padding: 0,
+                          background: "transparent",
+                          border: "none",
+                          color: "inherit",
+                          cursor: !isReadOnly ? "pointer" : "default",
+                          textAlign: "left",
+                        }}
+                      >
+                        <Badge>{it.category}</Badge>
+                        <span style={{ flex: 1, minWidth: 0, fontSize: "0.85rem" }}>{it.label}</span>
+                        <span style={{ fontSize: "0.82rem", color: "var(--muted)" }}>
+                          {money(it.actual_amount, b.currency)} / {money(it.planned_amount, b.currency)}
+                        </span>
+                      </button>
                       {!isReadOnly && (
                         <button
-                          onClick={() => removeItem.mutate(it.id)}
-                          aria-label="Remove item"
+                          onClick={() => {
+                            if (window.confirm(`Delete “${it.label}” from this budget?`)) {
+                              removeItem.mutate(it.id);
+                            }
+                          }}
+                          aria-label={`Delete ${it.label}`}
                           style={{ background: "transparent", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: "1rem" }}
                         >
                           ×
@@ -179,8 +197,19 @@ export default function BudgetPage() {
         />
       </Modal>
 
-      <Modal open={!!itemFor} onClose={() => { setItemFor(null); setMutationError(null); }} title="Add line item">
-        <ItemForm key={itemFor ?? "none"} onCancel={() => setItemFor(null)} onSubmit={submitItem} pending={addItem.isPending} error={mutationError} />
+      <Modal
+        open={!!itemEditor}
+        onClose={() => { setItemEditor(null); setMutationError(null); }}
+        title={itemEditor?.item ? "Edit line item" : "Add line item"}
+      >
+        <ItemForm
+          key={itemEditor?.item?.id ?? itemEditor?.budgetId ?? "none"}
+          initial={itemEditor?.item ?? null}
+          onCancel={() => setItemEditor(null)}
+          onSubmit={submitItem}
+          pending={addItem.isPending || updateItem.isPending}
+          error={mutationError}
+        />
       </Modal>
       </>)}
     </div>
@@ -237,30 +266,35 @@ function BudgetForm({
 }
 
 function ItemForm({
+  initial,
   onSubmit,
   onCancel,
   pending,
   error,
 }: {
+  initial: BudgetItem | null;
   onSubmit: (body: BudgetItemInput) => void;
   onCancel: () => void;
   pending: boolean;
   error: Error | null;
 }) {
-  const [category, setCategory] = useState<(typeof CATEGORIES)[number]>("production");
-  const [label, setLabel] = useState("");
-  const [planned, setPlanned] = useState("");
-  const [actual, setActual] = useState("");
+  const initialCategory = CATEGORIES.includes(initial?.category as (typeof CATEGORIES)[number])
+    ? initial!.category as (typeof CATEGORIES)[number]
+    : "production";
+  const [category, setCategory] = useState<(typeof CATEGORIES)[number]>(initialCategory);
+  const [label, setLabel] = useState(initial?.label ?? "");
+  const [planned, setPlanned] = useState(initial?.planned_amount ?? "");
+  const [actual, setActual] = useState(initial?.actual_amount ?? "0");
 
   const submit = () => {
     const plannedAmount = parseFloat(planned);
     if (!label.trim() || Number.isNaN(plannedAmount)) return;
-    const actualAmount = actual === "" ? null : parseFloat(actual);
+    const actualAmount = actual === "" ? 0 : parseFloat(actual);
     onSubmit({
       category,
       label: label.trim(),
       planned_amount: plannedAmount,
-      actual_amount: Number.isNaN(actualAmount as number) ? null : actualAmount,
+      actual_amount: Number.isNaN(actualAmount) ? 0 : actualAmount,
     });
   };
 
@@ -294,7 +328,7 @@ function ItemForm({
         <Field label="Planned">
           <Input type="number" min="0" step="0.01" value={planned} onChange={(e) => setPlanned(e.target.value)} />
         </Field>
-        <Field label="Actual (optional)">
+        <Field label="Actual">
           <Input type="number" min="0" step="0.01" value={actual} onChange={(e) => setActual(e.target.value)} />
         </Field>
       </div>
@@ -304,7 +338,7 @@ function ItemForm({
           Cancel
         </Button>
         <Button onClick={submit} disabled={pending || !label.trim() || !planned}>
-          {pending ? "Adding…" : "Add item"}
+          {pending ? "Saving…" : initial ? "Save changes" : "Add item"}
         </Button>
       </div>
     </>
