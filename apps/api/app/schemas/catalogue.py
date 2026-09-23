@@ -17,6 +17,7 @@ class CatalogueItemCreate(BaseModel):
     bpm: Optional[int] = Field(default=None, ge=0, le=400)
     key: Optional[str] = Field(default=None, max_length=50)
     file_size: Optional[int] = Field(default=None, ge=0, le=MAX_CATALOGUE_FILE_SIZE)
+    mime_type: Optional[str] = Field(default=None, max_length=255)
     tags: list[str] = Field(default_factory=list, max_length=50)
 
     model_config = {"str_strip_whitespace": True}
@@ -30,6 +31,7 @@ class CatalogueItemUpdate(BaseModel):
     isrc: Optional[str] = Field(default=None, max_length=20)
     bpm: Optional[int] = Field(default=None, ge=0, le=400)
     key: Optional[str] = Field(default=None, max_length=50)
+    mime_type: Optional[str] = Field(default=None, max_length=255)
     tags: Optional[list[str]] = Field(default=None, max_length=50)
 
     model_config = {"str_strip_whitespace": True}

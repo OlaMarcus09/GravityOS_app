@@ -631,6 +631,7 @@ export type CatalogueItem = {
   bpm: number | null;
   key: string | null;
   file_size: number | null;
+  mime_type: string | null;
   storage_path: string;
   tags: string[];
   created_at: string;
@@ -645,6 +646,7 @@ export type CatalogueInput = {
   bpm?: number | null;
   key?: string | null;
   file_size?: number | null;
+  mime_type?: string | null;
   tags?: string[];
 };
 

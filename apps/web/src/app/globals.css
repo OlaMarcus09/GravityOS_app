@@ -137,6 +137,106 @@ h2 {
   -webkit-backdrop-filter: blur(14px);
 }
 
+.catalogue-cover {
+  aspect-ratio: 1 / 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background-position: center;
+  background-size: cover;
+}
+
+.catalogue-status {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 1;
+}
+
+.catalogue-image-preview,
+.catalogue-image-placeholder {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: rgba(4, 6, 12, 0.72);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.catalogue-image-preview {
+  position: relative;
+  cursor: zoom-in;
+}
+
+.catalogue-image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.catalogue-image-preview span {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 3px 7px;
+  border: 1px solid rgba(245, 165, 36, 0.45);
+  border-radius: 4px;
+  background: rgba(5, 6, 13, 0.82);
+  color: var(--accent);
+  font-size: 0.68rem;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.catalogue-image-preview:hover span,
+.catalogue-image-preview:focus-visible span {
+  opacity: 1;
+}
+
+.catalogue-media-preview {
+  width: 100%;
+  min-width: 0;
+  padding: 0.35rem;
+  border: 1px solid rgba(245, 165, 36, 0.24);
+  border-radius: 6px;
+  background: rgba(6, 8, 15, 0.82);
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+.catalogue-media-preview audio,
+.catalogue-media-preview video {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  accent-color: var(--accent);
+  color-scheme: dark;
+}
+
+.catalogue-media-preview video {
+  aspect-ratio: 16 / 9;
+  background: #05060d;
+}
+
+.catalogue-lightbox-panel {
+  width: min(900px, calc(100vw - 2rem));
+}
+
+.catalogue-lightbox-image {
+  display: block;
+  width: 100%;
+  max-height: min(74vh, 800px);
+  object-fit: contain;
+  background: #05060d;
+}
+
 /* Scrollbars */
 ::-webkit-scrollbar {
   width: 10px;

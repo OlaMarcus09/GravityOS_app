@@ -42,7 +42,11 @@ def test_create_uses_unique_workspace_scoped_storage_paths() -> None:
     bucket.create_signed_upload_url.return_value = {"signedURL": "https://upload.test"}
     service = Mock()
     service.storage.from_.return_value = bucket
-    body = CatalogueItemCreate(title="Repeated title", kind="audio")
+    body = CatalogueItemCreate(
+        title="Repeated title",
+        kind="track",
+        mime_type="audio/wav",
+    )
 
     with patch("app.routers.catalogue.get_service_client", return_value=service):
         first = create_catalogue_item(body, workspace_context(db))
@@ -55,6 +59,7 @@ def test_create_uses_unique_workspace_scoped_storage_paths() -> None:
     assert first_path != second_path
     assert first["upload_url"] == "https://upload.test"
     assert second["upload_url"] == "https://upload.test"
+    assert query.insert.call_args_list[0].args[0]["mime_type"] == "audio/wav"
 
 
 def test_catalogue_create_rejects_oversized_declared_upload() -> None:

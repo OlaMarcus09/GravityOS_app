@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { catalogueApi, type CatalogueInput, type CatalogueItem } from "@/lib/api";
 import { useCatalogue, useCatalogueMutations } from "@/lib/queries/useCatalogue";
@@ -63,6 +63,105 @@ function kindIcon(kind: string): string {
   }
 }
 
+type PreviewType = "audio" | "video" | "image";
+
+function previewType(item: CatalogueItem): PreviewType | null {
+  const mime = item.mime_type?.split(";")[0].trim().toLowerCase();
+  if (mime?.startsWith("audio/")) return "audio";
+  if (mime?.startsWith("video/")) return "video";
+  if (mime?.startsWith("image/")) return "image";
+  if (mime && mime !== "application/octet-stream" && mime !== "binary/octet-stream") return null;
+
+  if (["track", "beat", "stem"].includes(item.kind)) return "audio";
+  if (item.kind === "video") return "video";
+  if (item.kind === "artwork") return "image";
+  return null;
+}
+
+function inferredMimeType(file: File): string | null {
+  if (file.type && file.type !== "application/octet-stream") return file.type;
+  const ext = file.name.split(".").pop()?.toLowerCase();
+  const types: Record<string, string> = {
+    aac: "audio/aac", flac: "audio/flac", m4a: "audio/mp4", mp3: "audio/mpeg",
+    oga: "audio/ogg", ogg: "audio/ogg", opus: "audio/opus", wav: "audio/wav",
+    mp4: "video/mp4", m4v: "video/mp4", mov: "video/quicktime", webm: "video/webm",
+    avif: "image/avif", gif: "image/gif", jpeg: "image/jpeg", jpg: "image/jpeg",
+    png: "image/png", svg: "image/svg+xml", webp: "image/webp",
+  };
+  return ext ? types[ext] ?? (file.type || null) : file.type || null;
+}
+
+function CataloguePreview({
+  item,
+  ws,
+  onExpand,
+}: {
+  item: CatalogueItem;
+  ws: string | null;
+  onExpand: (src: string, title: string) => void;
+}) {
+  const type = previewType(item);
+  const [src, setSrc] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  const refreshed = useRef(false);
+
+  useEffect(() => {
+    let active = true;
+    setSrc(null);
+    setFailed(false);
+    refreshed.current = false;
+    if (!ws || !type) return;
+    catalogueApi.get(ws, item.id)
+      .then((res) => { if (active) setSrc(res.download_url); })
+      .catch(() => { if (active) setFailed(true); });
+    return () => { active = false; };
+  }, [item.id, type, ws]);
+
+  if (!type) return null;
+  const refreshUrl = () => {
+    if (!ws || refreshed.current) {
+      setFailed(true);
+      return;
+    }
+    refreshed.current = true;
+    catalogueApi.get(ws, item.id)
+      .then((res) => setSrc(res.download_url))
+      .catch(() => setFailed(true));
+  };
+
+  if (type === "image") {
+    return (
+      <>
+        {src ? (
+          <button
+            type="button"
+            className="catalogue-image-preview"
+            aria-label={`Expand ${item.title}`}
+            onClick={() => onExpand(src, item.title)}
+          >
+            <img src={src} alt={item.title} onError={refreshUrl} />
+            <span aria-hidden="true">Expand</span>
+          </button>
+        ) : (
+          <div className="catalogue-image-placeholder">{failed ? "Preview unavailable" : "Loading preview..."}</div>
+        )}
+      </>
+    );
+  }
+
+  return (
+    <div className="catalogue-media-preview">
+      {src ? type === "audio" ? (
+        <audio controls preload="metadata" src={src} onError={refreshUrl} aria-label={`Preview ${item.title}`} />
+      ) : (
+        <video controls preload="metadata" src={src} onError={refreshUrl} aria-label={`Preview ${item.title}`} />
+      ) : (
+        <span>{failed ? "Preview unavailable" : "Loading preview..."}</span>
+      )}
+    </div>
+  );
+}
+
 export default function CataloguePage() {
   const { isReadOnly } = useWorkspace();
   const ws = useWorkspaceId();
@@ -72,6 +171,7 @@ export default function CataloguePage() {
   const [open, setOpen] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [lightbox, setLightbox] = useState<{ src: string; title: string } | null>(null);
 
   // Create the row, then PUT the file to the returned signed upload URL.
   const submit = async (body: CatalogueInput, file: File | null) => {
@@ -81,6 +181,7 @@ export default function CataloguePage() {
       const created = await create.mutateAsync({
         ...body,
         file_size: file ? file.size : null,
+        mime_type: file ? inferredMimeType(file) : null,
       });
       if (file && created.upload_url) {
         const res = await fetch(created.upload_url, {
@@ -139,21 +240,13 @@ export default function CataloguePage() {
         >
           {data.map((item) => (
             <Card key={item.id} style={{ padding: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-              {/* Cover art placeholder — deterministic gradient per item id. */}
-              <div
-                style={{
-                  aspectRatio: "1 / 1",
-                  background: coverGradient(item.id),
-                  position: "relative",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <span style={{ fontSize: "2rem", opacity: 0.85 }}>{kindIcon(item.kind)}</span>
-                <div style={{ position: "absolute", top: 8, left: 8 }}>
-                  <Badge tone={toneFor(item.status)}>{item.status}</Badge>
-                </div>
+              <div className="catalogue-cover" style={{ background: coverGradient(item.id) }}>
+                {previewType(item) === "image" ? (
+                  <CataloguePreview item={item} ws={ws} onExpand={(src, title) => setLightbox({ src, title })} />
+                ) : (
+                  <span style={{ fontSize: "2rem", opacity: 0.85 }}>{kindIcon(item.kind)}</span>
+                )}
+                <div className="catalogue-status"><Badge tone={toneFor(item.status)}>{item.status}</Badge></div>
               </div>
               <div style={{ padding: "0.85rem", display: "flex", flexDirection: "column", gap: "0.4rem", flex: 1 }}>
                 <div style={{ fontWeight: 600, fontSize: "0.9rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -174,6 +267,9 @@ export default function CataloguePage() {
                     ))}
                   </div>
                 )}
+                {(previewType(item) === "audio" || previewType(item) === "video") && (
+                  <CataloguePreview item={item} ws={ws} onExpand={(src, title) => setLightbox({ src, title })} />
+                )}
                 <div style={{ display: "flex", gap: "0.35rem", marginTop: "auto", paddingTop: "0.5rem" }}>
                   <Button size="sm" variant="ghost" onClick={() => download(item)} style={{ flex: 1 }}>
                     Download
@@ -192,6 +288,9 @@ export default function CataloguePage() {
 
       <Modal open={open} onClose={() => setOpen(false)} title="Add file">
         <CatalogueForm key={open ? "open" : "closed"} onCancel={() => setOpen(false)} onSubmit={submit} pending={busy} />
+      </Modal>
+      <Modal open={!!lightbox} onClose={() => setLightbox(null)} title={lightbox?.title ?? "Image preview"} panelClassName="catalogue-lightbox-panel">
+        {lightbox && <img className="catalogue-lightbox-image" src={lightbox.src} alt={lightbox.title} />}
       </Modal>
     </div>
   );
