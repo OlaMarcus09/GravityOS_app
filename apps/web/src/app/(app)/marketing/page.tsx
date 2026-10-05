@@ -30,19 +30,28 @@ const FORMATS = ["post", "reel", "story", "video", "other"] as const;
 
 // Content pieces may arrive on a nested field; normalize.
 type CampaignWithContent = Campaign & { content?: ContentPiece[]; content_pieces?: ContentPiece[] };
+type ContentEditor = { campaignId: string; item: ContentPiece | null };
 
 function contentOf(c: CampaignWithContent): ContentPiece[] {
   return c.content ?? c.content_pieces ?? [];
 }
 
+function toDateTimeLocalValue(value: string | null | undefined) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const timezoneOffset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 16);
+}
+
 export default function MarketingPage() {
   const { isReadOnly, plan } = useWorkspace();
   const { data, isLoading, error } = useCampaigns();
-  const { create, update, addContent, removeContent } = useMarketingMutations();
+  const { create, update, addContent, updateContent, removeContent } = useMarketingMutations();
 
   const [campaignOpen, setCampaignOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
-  const [contentFor, setContentFor] = useState<string | null>(null);
+  const [contentEditor, setContentEditor] = useState<ContentEditor | null>(null);
 
   const openCreate = () => {
     setEditingCampaign(null);
@@ -56,8 +65,14 @@ export default function MarketingPage() {
   };
 
   const submitContent = (body: ContentInput) => {
-    if (!contentFor) return;
-    addContent.mutate({ campaignId: contentFor, body }, { onSuccess: () => setContentFor(null), onError: (e) => setMutationError(e) });
+    if (!contentEditor) return;
+    const onSuccess = () => { setContentEditor(null); setMutationError(null); };
+    const onError = (e: Error) => setMutationError(e);
+    if (contentEditor.item) {
+      updateContent.mutate({ contentId: contentEditor.item.id, body }, { onSuccess, onError });
+    } else {
+      addContent.mutate({ campaignId: contentEditor.campaignId, body }, { onSuccess, onError });
+    }
   };
   const [mutationError, setMutationError] = useState<Error | null>(null);
 
@@ -99,7 +114,7 @@ export default function MarketingPage() {
                 <div style={{ display: "flex", gap: "0.35rem" }}>
                   {!isReadOnly && (
                     <>
-                      <Button size="sm" variant="ghost" onClick={() => setContentFor(c.id)}>
+                      <Button size="sm" variant="ghost" onClick={() => { setMutationError(null); setContentEditor({ campaignId: c.id, item: null }); }}>
                         + Content
                       </Button>
                       <Button size="sm" variant="ghost" onClick={() => { setEditingCampaign(c); setCampaignOpen(true); }}>
@@ -124,17 +139,37 @@ export default function MarketingPage() {
                         borderRadius: "var(--radius-sm)",
                       }}
                     >
-                      <Badge tone="accent">{p.platform}</Badge>
-                      <Badge>{p.format}</Badge>
-                      <span style={{ flex: 1, minWidth: 0, fontSize: "0.84rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        {p.caption || <span style={{ color: "var(--muted)" }}>No caption</span>}
-                      </span>
-                      {p.scheduled_at && (
-                        <span style={{ fontSize: "0.74rem", color: "var(--muted)" }}>
-                          {new Date(p.scheduled_at).toLocaleDateString()}
+                      <button
+                        type="button"
+                        disabled={isReadOnly}
+                        aria-label={`Edit ${p.platform} ${p.format} content`}
+                        onClick={() => { setMutationError(null); setContentEditor({ campaignId: c.id, item: p }); }}
+                        style={{
+                          flex: 1,
+                          minWidth: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.6rem",
+                          padding: 0,
+                          background: "transparent",
+                          border: "none",
+                          color: "inherit",
+                          cursor: !isReadOnly ? "pointer" : "default",
+                          textAlign: "left",
+                        }}
+                      >
+                        <Badge tone="accent">{p.platform}</Badge>
+                        <Badge>{p.format}</Badge>
+                        <span style={{ flex: 1, minWidth: 0, fontSize: "0.84rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {p.caption || <span style={{ color: "var(--muted)" }}>No caption</span>}
                         </span>
-                      )}
-                      <Badge tone={toneFor(p.status)}>{p.status}</Badge>
+                        {p.scheduled_at && (
+                          <span style={{ fontSize: "0.74rem", color: "var(--muted)" }}>
+                            {new Date(p.scheduled_at).toLocaleDateString()}
+                          </span>
+                        )}
+                        <Badge tone={toneFor(p.status)}>{p.status}</Badge>
+                      </button>
                       {!isReadOnly && (
                         <button
                           onClick={() => removeContent.mutate(p.id)}
@@ -164,8 +199,19 @@ export default function MarketingPage() {
         />
       </Modal>
 
-      <Modal open={!!contentFor} onClose={() => { setContentFor(null); setMutationError(null); }} title="Add content">
-        <ContentForm key={contentFor ?? "none"} onCancel={() => setContentFor(null)} onSubmit={submitContent} pending={addContent.isPending} />
+      <Modal
+        open={!!contentEditor}
+        onClose={() => { setContentEditor(null); setMutationError(null); }}
+        title={contentEditor?.item ? "Edit content" : "Add content"}
+      >
+        <ContentForm
+          key={contentEditor?.item?.id ?? contentEditor?.campaignId ?? "none"}
+          initial={contentEditor?.item ?? null}
+          onCancel={() => setContentEditor(null)}
+          onSubmit={submitContent}
+          pending={addContent.isPending || updateContent.isPending}
+          error={mutationError}
+        />
       </Modal>
       </>)}
     </div>
@@ -247,19 +293,32 @@ function CampaignForm({
 }
 
 function ContentForm({
+  initial,
   onSubmit,
   onCancel,
   pending,
+  error,
 }: {
+  initial: ContentPiece | null;
   onSubmit: (body: ContentInput) => void;
   onCancel: () => void;
   pending: boolean;
+  error: Error | null;
 }) {
-  const [platform, setPlatform] = useState<(typeof PLATFORMS)[number]>("instagram");
-  const [format, setFormat] = useState<(typeof FORMATS)[number]>("reel");
-  const [status, setStatus] = useState<(typeof CONTENT_STATUS)[number]>("idea");
-  const [scheduledAt, setScheduledAt] = useState("");
-  const [caption, setCaption] = useState("");
+  const initialPlatform = PLATFORMS.includes(initial?.platform as (typeof PLATFORMS)[number])
+    ? initial!.platform as (typeof PLATFORMS)[number]
+    : "instagram";
+  const initialFormat = FORMATS.includes(initial?.format as (typeof FORMATS)[number])
+    ? initial!.format as (typeof FORMATS)[number]
+    : "reel";
+  const initialStatus = CONTENT_STATUS.includes(initial?.status as (typeof CONTENT_STATUS)[number])
+    ? initial!.status as (typeof CONTENT_STATUS)[number]
+    : "idea";
+  const [platform, setPlatform] = useState<(typeof PLATFORMS)[number]>(initialPlatform);
+  const [format, setFormat] = useState<(typeof FORMATS)[number]>(initialFormat);
+  const [status, setStatus] = useState<(typeof CONTENT_STATUS)[number]>(initialStatus);
+  const [scheduledAt, setScheduledAt] = useState(toDateTimeLocalValue(initial?.scheduled_at));
+  const [caption, setCaption] = useState(initial?.caption ?? "");
 
   const submit = () => {
     onSubmit({
@@ -304,12 +363,13 @@ function ContentForm({
       <Field label="Caption">
         <Textarea value={caption} onChange={(e) => setCaption(e.target.value)} rows={3} />
       </Field>
+      <ErrorText error={error} />
       <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "0.5rem" }}>
         <Button variant="ghost" onClick={onCancel}>
           Cancel
         </Button>
         <Button onClick={submit} disabled={pending}>
-          {pending ? "Adding…" : "Add content"}
+          {pending ? "Saving…" : initial ? "Save changes" : "Add content"}
         </Button>
       </div>
     </>
