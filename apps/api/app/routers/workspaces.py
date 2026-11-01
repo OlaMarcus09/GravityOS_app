@@ -13,6 +13,7 @@ from app.core.db import get_service_client
 from app.core.deps import WorkspaceContext, get_db, get_workspace_context, require_writer
 from app.core.rate_limit import check_rate_limit
 from app.schemas.workspaces import MemberInvite, MemberUpdate, WorkspaceCreate, WorkspaceUpdate
+from app.services.entitlements import effective_plan
 
 router = APIRouter(prefix="/workspaces", tags=["workspaces"])
 
@@ -152,7 +153,12 @@ def list_workspaces(auth: AuthContext = Depends(get_auth_context)) -> list[dict]
         .eq("user_id", auth.user_id)
         .execute()
     )
-    return res.data or []
+    rows = res.data or []
+    for row in rows:
+        workspace = row.get("workspaces")
+        if workspace:
+            workspace["plan"] = effective_plan(workspace)
+    return rows
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)

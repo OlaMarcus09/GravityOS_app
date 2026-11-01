@@ -10,14 +10,14 @@ class WorkspaceCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     type: str = Field(default="personal", min_length=1, max_length=30)
 
-    model_config = {"str_strip_whitespace": True}
+    model_config = {"str_strip_whitespace": True, "extra": "forbid"}
 
 
 class WorkspaceUpdate(BaseModel):
     name: Optional[str] = Field(default=None, min_length=1, max_length=120)
     type: Optional[str] = Field(default=None, min_length=1, max_length=30)
 
-    model_config = {"str_strip_whitespace": True}
+    model_config = {"str_strip_whitespace": True, "extra": "forbid"}
 
 
 class MemberInvite(BaseModel):

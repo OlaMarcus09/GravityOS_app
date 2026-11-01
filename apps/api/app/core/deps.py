@@ -17,6 +17,7 @@ from supabase import Client
 
 from app.core.auth import AuthContext, get_auth_context
 from app.core.db import get_user_client
+from app.services.entitlements import effective_plan
 
 # Plan → limits. Enforced in FastAPI per ARCHITECTURE.md (plan flags, no payments).
 PLAN_LIMITS: dict[str, dict[str, int | None]] = {
@@ -53,7 +54,7 @@ def get_workspace_context(
     """Confirm membership and load role + plan for the active workspace."""
     member = (
         db.table("workspace_members")
-        .select("role, workspaces(plan)")
+        .select("role, workspaces(plan,billing_status,current_period_end,trial_started_at,trial_expires_at)")
         .eq("workspace_id", x_workspace_id)
         .eq("user_id", auth.user_id)
         .maybe_single()
@@ -64,7 +65,7 @@ def get_workspace_context(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={"error": {"code": "not_a_member", "message": "not a workspace member"}},
         )
-    plan = (member.data.get("workspaces") or {}).get("plan", "free")
+    plan = effective_plan(member.data.get("workspaces") or {})
     return WorkspaceContext(
         workspace_id=x_workspace_id,
         role=member.data["role"],

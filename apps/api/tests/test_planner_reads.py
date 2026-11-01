@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from unittest.mock import Mock
+import pytest
+from fastapi import HTTPException
 
 from app.core.auth import AuthContext
 from app.core.deps import WorkspaceContext
@@ -59,3 +61,13 @@ def test_release_plan_read_includes_nested_milestones() -> None:
     query.select.assert_called_once_with("*, release_milestones(*)")
     query.eq.assert_any_call("project_id", "project-1")
     query.eq.assert_any_call("workspace_id", "workspace-1")
+
+
+def test_release_plan_missing_in_another_workspace_returns_404() -> None:
+    query = _query(None)
+    query.execute.return_value = None
+    db = Mock()
+    db.table.return_value = query
+    with pytest.raises(HTTPException) as exc:
+        get_release_plan("other-workspace-project", _context(db))
+    assert exc.value.status_code == 404

@@ -12,7 +12,7 @@ router = APIRouter(tags=["releases"])
 
 def _get_plan_or_404(ctx: WorkspaceContext, plan_id: str) -> dict:
     row = ctx.db.table("release_plans").select("*").eq("id", plan_id).eq("workspace_id", ctx.workspace_id).maybe_single().execute()
-    if not row.data:
+    if not row or not row.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail={"error": {"code": "not_found", "message": "release plan not found"}})
     return row.data
@@ -43,7 +43,7 @@ def get_release_plan(project_id: str, ctx: WorkspaceContext = Depends(get_worksp
         .maybe_single()
         .execute()
     )
-    if not row.data:
+    if not row or not row.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail={"error": {"code": "not_found", "message": "release plan not found"}})
     return row.data

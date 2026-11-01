@@ -25,9 +25,8 @@ class Settings(BaseSettings):
     # CORS — the deployed Next.js origin(s), comma-separated.
     cors_origins: str = Field(default="http://localhost:3000", alias="CORS_ORIGINS")
 
-    # Stripe (placeholder until keys are configured)
-    stripe_secret_key: str = Field(default="", alias="STRIPE_SECRET_KEY")
-    stripe_webhook_secret: str = Field(default="", alias="STRIPE_WEBHOOK_SECRET")
+    # Reserved for a separately authorized payment release. This release never collects payments.
+    billing_checkout_enabled: bool = Field(default=False, alias="BILLING_CHECKOUT_ENABLED")
     soundcharts_app_id: str = Field(default="", alias="SOUNDCHARTS_APP_ID")
     soundcharts_api_key: str = Field(default="", alias="SOUNDCHARTS_API_KEY")
     resend_api_key: str = Field(default="", alias="RESEND_API_KEY")

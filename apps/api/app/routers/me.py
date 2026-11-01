@@ -15,6 +15,7 @@ from supabase import Client
 from app.core.auth import AuthContext, get_auth_context
 from app.core.config import get_settings
 from app.core.deps import get_db
+from app.services.entitlements import effective_plan
 
 router = APIRouter(tags=["me"])
 
@@ -36,10 +37,15 @@ def _read_me(auth: AuthContext, db: Client) -> dict:
     )
     memberships = (
         db.table("workspace_members")
-        .select("workspace_id, role, workspaces(name, plan, type)")
+        .select("workspace_id, role, workspaces(name, plan, type, billing_status, current_period_end, trial_started_at, trial_expires_at)")
         .eq("user_id", auth.user_id)
         .execute()
     )
+    rows = memberships.data or []
+    for row in rows:
+        workspace = row.get("workspaces")
+        if workspace:
+            workspace["plan"] = effective_plan(workspace)
     return {
         "user_id": auth.user_id,
         "email": auth.email,
@@ -49,7 +55,7 @@ def _read_me(auth: AuthContext, db: Client) -> dict:
             )
         },
         "profile": profile.data,
-        "memberships": memberships.data or [],
+        "memberships": rows,
     }
 
 
