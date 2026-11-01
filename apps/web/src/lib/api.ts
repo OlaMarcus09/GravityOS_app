@@ -140,22 +140,6 @@ export function updateProfile(body: ProfileInput) {
   return apiFetch<MeResponse>("/me", { method: "PATCH", body });
 }
 
-export type BillingDetails = {
-  plan: string;
-  billing_status: "none" | "active" | "expired" | "manual";
-  trial_status: "none" | "active" | "expired" | "superseded";
-  trial_started_at: string | null;
-  trial_expires_at: string | null;
-  current_period_start: string | null;
-  current_period_end: string | null;
-  checkout_eligible: false;
-};
-
-export const billingApi = {
-  details: (workspaceId: string) =>
-    apiFetch<BillingDetails>("/billing/details", { workspaceId }),
-};
-
 export type WorkspaceInvitation = {
   id: string;
   workspace_id: string;

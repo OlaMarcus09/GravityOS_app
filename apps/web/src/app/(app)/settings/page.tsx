@@ -2,12 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 
 import { useMe, useProfileMutation } from "@/lib/queries/useMe";
 import { useInvitationMutations, usePendingInvitations, useWorkspaceInvitations } from "@/lib/queries/useInvitations";
 import { useWorkspace } from "@/lib/workspace";
-import { billingApi, type NotificationPreferencesUpdate } from "@/lib/api";
+import type { NotificationPreferencesUpdate } from "@/lib/api";
 import { useNotificationPreferences, useNotificationPreferencesMutation } from "@/lib/queries/useNotifications";
 import { useArtistStreamingLink, useStreamingMutations, useStreamingSummary } from "@/lib/queries/useStreaming";
 import { Badge, Button, Card, ErrorText, Field, Input, PageHeader, Select } from "@/components/ui";
@@ -80,12 +79,6 @@ export default function SettingsPage() {
   const streamingLink = useArtistStreamingLink(workspaceId);
   const streamingSummary = useStreamingSummary(workspaceId);
   const streamingMutations = useStreamingMutations(workspaceId);
-  const billingQuery = useQuery({
-    queryKey: ["billing", workspaceId],
-    queryFn: () => billingApi.details(workspaceId!),
-    enabled: !!workspaceId,
-  });
-  const billing = billingQuery.data;
 
   // Seed form from server data
   useEffect(() => {
@@ -371,7 +364,7 @@ export default function SettingsPage() {
 
         <p style={{ color: "var(--muted)", fontSize: "0.85rem", margin: "0 0 1rem" }}>
           {plan === "free"
-            ? "You're on the Free plan. Your existing workspace data remains available."
+            ? "You're on the Free plan. Upgrade to unlock release planning, budgets, marketing, and more."
             : `You're on the ${current.label} plan with full access to all features.`}
         </p>
 
@@ -384,22 +377,18 @@ export default function SettingsPage() {
           ))}
         </div>
 
-        {billing?.trial_status === "active" && billing.trial_expires_at && <p role="status" style={{ color: "var(--accent)", fontSize: "0.9rem" }}>
-          Birthday Pro trial active · Free for seven days · Ends {new Date(billing.trial_expires_at).toUTCString()}. No card required and no automatic billing.
-        </p>}
-        {billing?.trial_status === "expired" && <p role="status" style={{ color: "var(--muted)", fontSize: "0.9rem" }}>
-          Your Birthday Pro trial ended {billing.trial_expires_at ? new Date(billing.trial_expires_at).toUTCString() : ""}. Your workspace is on Free; your data is still here.
-        </p>}
-        {billing?.billing_status === "manual" && <p style={{ color: "var(--muted)", fontSize: "0.85rem" }}>
-          This plan is managed by the GravityOS team. Contact support for changes or renewal.
-        </p>}
-        {billing?.billing_status === "active" && billing.current_period_end && <p style={{ color: "var(--muted)", fontSize: "0.85rem" }}>
-          Paid through {new Date(billing.current_period_end).toUTCString()}.
-        </p>}
-        <p style={{ color: "var(--muted)", fontSize: "0.85rem" }}>
-          Paid upgrades are coming soon. Your trial will never start a charge automatically.
-        </p>
-        <ErrorText error={billingQuery.error} />
+        {plan === "free" && (
+          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+            <Button>Upgrade to Pro</Button>
+            <Button variant="ghost">Compare plans</Button>
+          </div>
+        )}
+
+        {plan !== "free" && (
+          <p style={{ color: "var(--muted-2)", fontSize: "0.8rem", margin: 0 }}>
+            Billing management will be available once Stripe is connected.
+          </p>
+        )}
       </Card>
 
       <Card style={{ padding: "1.5rem" }}>
