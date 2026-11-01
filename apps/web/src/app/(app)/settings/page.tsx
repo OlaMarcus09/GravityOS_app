@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 import { useMe, useProfileMutation } from "@/lib/queries/useMe";
 import { useInvitationMutations, usePendingInvitations, useWorkspaceInvitations } from "@/lib/queries/useInvitations";
 import { useWorkspace } from "@/lib/workspace";
-import type { NotificationPreferencesUpdate } from "@/lib/api";
+import { billingApi, type NotificationPreferencesUpdate } from "@/lib/api";
 import { useNotificationPreferences, useNotificationPreferencesMutation } from "@/lib/queries/useNotifications";
 import { useArtistStreamingLink, useStreamingMutations, useStreamingSummary } from "@/lib/queries/useStreaming";
 import { Badge, Button, Card, ErrorText, Field, Input, PageHeader, Select } from "@/components/ui";
@@ -57,6 +58,15 @@ const PLAN_FEATURES: Record<string, { label: string; features: string[] }> = {
   },
 };
 
+function trialTimeRemaining(expiresAt: string, now: number): string {
+  const minutes = Math.max(0, Math.ceil((new Date(expiresAt).getTime() - now) / 60_000));
+  if (minutes === 0) return "Expired";
+  const days = Math.floor(minutes / 1_440);
+  const hours = Math.floor((minutes % 1_440) / 60);
+  const remainingMinutes = minutes % 60;
+  return `${days}d ${hours}h ${remainingMinutes}m remaining`;
+}
+
 export default function SettingsPage() {
   const { data: me } = useMe();
   const { plan, role, workspaceId, setWorkspaceId, isReadOnly } = useWorkspace();
@@ -66,6 +76,7 @@ export default function SettingsPage() {
   const [creativeRole, setCreativeRole] = useState("");
   const [timezone, setTimezone] = useState("");
   const [saved, setSaved] = useState(false);
+  const [now, setNow] = useState<number | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"admin" | "member" | "viewer">("member");
   const pending = usePendingInvitations();
@@ -79,6 +90,19 @@ export default function SettingsPage() {
   const streamingLink = useArtistStreamingLink(workspaceId);
   const streamingSummary = useStreamingSummary(workspaceId);
   const streamingMutations = useStreamingMutations(workspaceId);
+  const billingQuery = useQuery({
+    queryKey: ["billing", workspaceId],
+    queryFn: () => billingApi.details(workspaceId!),
+    enabled: !!workspaceId,
+    refetchInterval: 60_000,
+  });
+  const billing = billingQuery.data;
+
+  useEffect(() => {
+    setNow(Date.now());
+    const timer = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   // Seed form from server data
   useEffect(() => {
@@ -113,7 +137,8 @@ export default function SettingsPage() {
     );
   };
 
-  const current = PLAN_FEATURES[plan] ?? PLAN_FEATURES.free;
+  const displayedPlan = billing?.plan ?? plan;
+  const current = PLAN_FEATURES[displayedPlan] ?? PLAN_FEATURES.free;
   const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const canManageTeam = plan === "team" && (role === "owner" || role === "admin");
 
@@ -359,12 +384,12 @@ export default function SettingsPage() {
       <Card style={{ padding: "1.5rem", marginBottom: "1.5rem" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
           <span className="eyebrow">Plan & Billing</span>
-          <Badge tone={plan === "free" ? "neutral" : "accent"}>{current.label}</Badge>
+          <Badge tone={displayedPlan === "free" ? "neutral" : "accent"}>{current.label}</Badge>
         </div>
 
         <p style={{ color: "var(--muted)", fontSize: "0.85rem", margin: "0 0 1rem" }}>
-          {plan === "free"
-            ? "You're on the Free plan. Upgrade to unlock release planning, budgets, marketing, and more."
+          {displayedPlan === "free"
+            ? "You're on the Free plan. Your existing workspace data remains available."
             : `You're on the ${current.label} plan with full access to all features.`}
         </p>
 
@@ -377,18 +402,24 @@ export default function SettingsPage() {
           ))}
         </div>
 
-        {plan === "free" && (
-          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-            <Button>Upgrade to Pro</Button>
-            <Button variant="ghost">Compare plans</Button>
-          </div>
-        )}
-
-        {plan !== "free" && (
-          <p style={{ color: "var(--muted-2)", fontSize: "0.8rem", margin: 0 }}>
-            Billing management will be available once Stripe is connected.
-          </p>
-        )}
+        {billing?.trial_status === "active" && billing.trial_expires_at && <p role="status" style={{ color: "var(--accent)", fontSize: "0.9rem" }}>
+          Seven-day Pro trial active · Ends {new Date(billing.trial_expires_at).toUTCString()}
+          {now !== null && ` · ${trialTimeRemaining(billing.trial_expires_at, now)}`}.
+          After expiry, your workspace returns to Free restrictions and your existing data stays available. No card required and no automatic billing.
+        </p>}
+        {billing?.trial_status === "expired" && <p role="status" style={{ color: "var(--muted)", fontSize: "0.9rem" }}>
+          Your seven-day Pro trial ended {billing.trial_expires_at ? new Date(billing.trial_expires_at).toUTCString() : ""}. Your workspace is on Free with Free plan restrictions; your existing data remains available.
+        </p>}
+        {billing?.billing_status === "manual" && <p style={{ color: "var(--muted)", fontSize: "0.85rem" }}>
+          This plan is managed by the GravityOS team. Contact support for changes or renewal.
+        </p>}
+        {billing?.billing_status === "active" && billing.current_period_end && <p style={{ color: "var(--muted)", fontSize: "0.85rem" }}>
+          Paid through {new Date(billing.current_period_end).toUTCString()}.
+        </p>}
+        <p style={{ color: "var(--muted)", fontSize: "0.85rem" }}>
+          Paid upgrades are coming soon. Your trial will never start a charge automatically.
+        </p>
+        <ErrorText error={billingQuery.error} />
       </Card>
 
       <Card style={{ padding: "1.5rem" }}>

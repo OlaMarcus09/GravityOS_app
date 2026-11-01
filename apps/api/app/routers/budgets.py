@@ -14,7 +14,7 @@ router = APIRouter(tags=["budgets"])
 
 def _get_budget_or_404(ctx: WorkspaceContext, budget_id: str) -> dict:
     row = ctx.db.table("budgets").select("*").eq("id", budget_id).eq("workspace_id", ctx.workspace_id).maybe_single().execute()
-    if not row.data:
+    if not row or not row.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail={"error": {"code": "not_found", "message": "budget not found"}})
     return row.data
@@ -29,7 +29,7 @@ def _get_item_or_404(ctx: WorkspaceContext, item_id: str) -> dict:
         .maybe_single()
         .execute()
     )
-    if not row.data:
+    if not row or not row.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail={"error": {"code": "not_found", "message": "budget item not found"}})
     return row.data

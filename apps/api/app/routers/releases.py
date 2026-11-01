@@ -27,7 +27,7 @@ def _get_milestone_or_404(ctx: WorkspaceContext, milestone_id: str) -> dict:
         .maybe_single()
         .execute()
     )
-    if not row.data:
+    if not row or not row.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail={"error": {"code": "not_found", "message": "milestone not found"}})
     return row.data

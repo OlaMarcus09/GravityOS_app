@@ -49,7 +49,7 @@ def _target_or_404(ctx: WorkspaceContext, target_type: str, target_id: str) -> d
         .maybe_single()
         .execute()
     )
-    if not row.data:
+    if not row or not row.data:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"error": {"code": "not_found", "message": f"{target_type} not found"}},
@@ -214,7 +214,7 @@ def delete_comment(
         .maybe_single()
         .execute()
     )
-    if not existing.data:
+    if not existing or not existing.data:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"error": {"code": "not_found", "message": "comment not found"}},

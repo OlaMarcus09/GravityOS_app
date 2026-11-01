@@ -14,7 +14,7 @@ router = APIRouter(tags=["marketing"])
 
 def _get_campaign_or_404(ctx: WorkspaceContext, campaign_id: str) -> dict:
     row = ctx.db.table("campaigns").select("*").eq("id", campaign_id).eq("workspace_id", ctx.workspace_id).maybe_single().execute()
-    if not row.data:
+    if not row or not row.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail={"error": {"code": "not_found", "message": "campaign not found"}})
     return row.data
@@ -22,7 +22,7 @@ def _get_campaign_or_404(ctx: WorkspaceContext, campaign_id: str) -> dict:
 
 def _get_content_or_404(ctx: WorkspaceContext, content_id: str) -> dict:
     row = ctx.db.table("content_pieces").select("*").eq("id", content_id).eq("workspace_id", ctx.workspace_id).maybe_single().execute()
-    if not row.data:
+    if not row or not row.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail={"error": {"code": "not_found", "message": "content piece not found"}})
     return row.data

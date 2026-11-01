@@ -34,7 +34,7 @@ def _new_storage_path(workspace_id: str) -> str:
 
 def _get_or_404(ctx: WorkspaceContext, item_id: str) -> dict:
     row = ctx.db.table("catalogue_items").select("*").eq("id", item_id).eq("workspace_id", ctx.workspace_id).maybe_single().execute()
-    if not row.data:
+    if not row or not row.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail={"error": {"code": "not_found", "message": "catalogue item not found"}})
     return row.data
