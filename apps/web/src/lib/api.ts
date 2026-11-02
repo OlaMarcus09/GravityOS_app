@@ -154,6 +154,12 @@ export type BillingDetails = {
 export const billingApi = {
   details: (workspaceId: string) =>
     apiFetch<BillingDetails>("/billing/details", { workspaceId }),
+  existingTrialEligibility: (workspaceId: string) =>
+    apiFetch<{ eligible: boolean; reason: string; message: string | null }>(
+      "/billing/existing-trial/eligibility", { workspaceId }),
+  claimExistingTrial: (workspaceId: string) =>
+    apiFetch<{ reason: "activated"; trial_started_at: string; trial_expires_at: string }>(
+      "/billing/existing-trial/claim", { workspaceId, method: "POST" }),
 };
 
 export type WorkspaceInvitation = {
