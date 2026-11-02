@@ -22,6 +22,7 @@ from app.routers import (
     catalogue,
     collaboration,
     dashboard,
+    existing_trial,
     intelligence,
     marketing,
     me,
@@ -165,6 +166,7 @@ def create_app() -> FastAPI:
         dashboard,
         intelligence,
         billing,
+        existing_trial,
     ):
         v1.include_router(module.router)
     app.include_router(v1)

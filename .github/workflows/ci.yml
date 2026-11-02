@@ -14,6 +14,42 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  existing-trial-sql:
+    name: Existing-user trial SQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: trial-test-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: trial-test-only
+      PGDATABASE: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare isolated trial schema
+        run: psql -X -v ON_ERROR_STOP=1 -f apps/api/tests/sql/existing_trial_bootstrap.sql
+      - name: Apply only new trial migration
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/0032_existing_user_trial_claim.sql
+      - name: Exercise owner eligibility, claim, and boundaries
+        run: psql -X -v ON_ERROR_STOP=1 -f apps/api/tests/sql/existing_trial_rehearsal.sql
+      - name: Exercise concurrent claims across two Free workspaces
+        run: sh apps/api/tests/sql/existing_trial_concurrency.sh
+      - name: Verify service-only RPC grants
+        run: |
+          test "$(psql -X -A -t -c "select has_function_privilege('authenticated','public.claim_existing_user_trial(uuid,uuid)','EXECUTE')::text || ',' || has_function_privilege('service_role','public.claim_existing_user_trial(uuid,uuid)','EXECUTE')::text")" = "false,true"
+
   api-tests:
     name: API tests
     runs-on: ubuntu-latest

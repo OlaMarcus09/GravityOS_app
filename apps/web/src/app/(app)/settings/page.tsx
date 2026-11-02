@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useMe, useProfileMutation } from "@/lib/queries/useMe";
 import { useInvitationMutations, usePendingInvitations, useWorkspaceInvitations } from "@/lib/queries/useInvitations";
@@ -68,6 +68,7 @@ function trialTimeRemaining(expiresAt: string, now: number): string {
 }
 
 export default function SettingsPage() {
+  const queryClient = useQueryClient();
   const { data: me } = useMe();
   const { plan, role, workspaceId, setWorkspaceId, isReadOnly } = useWorkspace();
   const mutation = useProfileMutation();
@@ -97,6 +98,26 @@ export default function SettingsPage() {
     refetchInterval: 60_000,
   });
   const billing = billingQuery.data;
+  const trialEligibility = useQuery({
+    queryKey: ["existingTrialEligibility", workspaceId],
+    queryFn: () => billingApi.existingTrialEligibility(workspaceId!),
+    enabled: !!workspaceId && role === "owner",
+    refetchOnWindowFocus: true,
+    staleTime: 0,
+  });
+  const claimTrial = useMutation({
+    mutationFn: (selectedWorkspaceId: string) => billingApi.claimExistingTrial(selectedWorkspaceId),
+    onSuccess: (_result, selectedWorkspaceId) => {
+      void Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["billing", selectedWorkspaceId] }),
+        queryClient.invalidateQueries({ queryKey: ["existingTrialEligibility"] }),
+        queryClient.invalidateQueries({ queryKey: ["me"] }),
+      ]);
+    },
+    onError: () => {
+      void queryClient.invalidateQueries({ queryKey: ["existingTrialEligibility", workspaceId] });
+    },
+  });
 
   useEffect(() => {
     setNow(Date.now());
@@ -403,10 +424,23 @@ export default function SettingsPage() {
         </div>
 
         {billing?.trial_status === "active" && billing.trial_expires_at && <p role="status" style={{ color: "var(--accent)", fontSize: "0.9rem" }}>
-          Seven-day Pro trial active · Ends {new Date(billing.trial_expires_at).toUTCString()}
+          Seven-day Pro trial active · Ends {new Date(billing.trial_expires_at).toLocaleString(undefined, { dateStyle: "full", timeStyle: "long" })}
           {now !== null && ` · ${trialTimeRemaining(billing.trial_expires_at, now)}`}.
           After expiry, your workspace returns to Free restrictions and your existing data stays available. No card required and no automatic billing.
         </p>}
+        {role === "owner" && billingQuery.isPending && <p role="status">Checking your plan…</p>}
+        {role === "owner" && trialEligibility.isPending && <p role="status">Checking trial eligibility…</p>}
+        {role === "owner" && billing?.plan === "free" && billing.trial_status === "none" && trialEligibility.data?.eligible && !(claimTrial.isSuccess && claimTrial.variables === workspaceId) && (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "0.75rem", marginBottom: "1rem" }}>
+            <p style={{ margin: 0 }}>You&apos;re invited to enjoy seven days of GravityOS Pro, free. No payment card required. Your trial begins when you claim it.</p>
+            <Button disabled={claimTrial.isPending || trialEligibility.isFetching || billingQuery.isFetching || !workspaceId}
+              onClick={() => { if (workspaceId) claimTrial.mutate(workspaceId); }}>
+              {claimTrial.isPending ? "Claiming…" : "Claim My Trial"}
+            </Button>
+          </div>
+        )}
+        {claimTrial.isSuccess && claimTrial.variables === workspaceId && claimTrial.data.reason === "activated" && <p role="status">Your Pro trial is active until {new Date(claimTrial.data.trial_expires_at).toLocaleString(undefined, { dateStyle: "full", timeStyle: "long" })}. No automatic charges; your data stays available after expiry.</p>}
+        <ErrorText error={trialEligibility.error ?? (claimTrial.variables === workspaceId ? claimTrial.error : null)} />
         {billing?.trial_status === "expired" && <p role="status" style={{ color: "var(--muted)", fontSize: "0.9rem" }}>
           Your seven-day Pro trial ended {billing.trial_expires_at ? new Date(billing.trial_expires_at).toUTCString() : ""}. Your workspace is on Free with Free plan restrictions; your existing data remains available.
         </p>}
