@@ -24,6 +24,7 @@ from app.jobs.trial_invitation_delivery import (
     prepare_invitation,
 )
 from app.routers import trial_invitation_opt_out
+from scripts.send_trial_test_invitation import _is_production_connection
 
 
 def test_opt_out_token_is_opaque_single_purpose_and_tamper_resistant(monkeypatch):
@@ -111,3 +112,17 @@ def test_disabled_sending_never_calls_provider_or_resend(monkeypatch):
                          uuid4(), provider=provider, sender=sender)
     provider.verify_sender_domain.assert_not_called()
     sender.send_email.assert_not_called()
+
+
+def test_test_sender_accepts_only_verified_production_database_routes():
+    base = {"dbname": "postgres", "sslmode": "require", "port": "5432"}
+    assert _is_production_connection({**base, "host": "db.hopleyvbxiuksxxucozg.supabase.co",
+                                      "user": "postgres"})
+    assert _is_production_connection({**base, "host": "aws-0-eu-central-1.pooler.supabase.com",
+                                      "user": "postgres.hopleyvbxiuksxxucozg"})
+    assert not _is_production_connection({**base, "host": "aws-0-eu-central-1.pooler.supabase.com",
+                                          "user": "postgres.otherproject"})
+    assert not _is_production_connection({**base, "host": "db.hopleyvbxiuksxxucozg.supabase.co",
+                                          "user": "postgres", "hostaddr": "127.0.0.1"})
+    assert not _is_production_connection({**base, "host": "db.hopleyvbxiuksxxucozg.supabase.co",
+                                          "user": "postgres", "dbname": "other"})

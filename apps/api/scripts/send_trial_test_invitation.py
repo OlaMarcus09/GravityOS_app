@@ -16,6 +16,18 @@ from app.jobs.trial_invitation_delivery import (
 )
 
 
+def _is_production_connection(opts: dict[str, str]) -> bool:
+    """Allow only this project's direct or verified session-pooler connection."""
+    if (opts.get("dbname") != "postgres" or opts.get("sslmode") != "require"
+            or opts.get("port") != "5432" or opts.get("hostaddr")
+            or opts.get("service") or opts.get("servicefile")):
+        return False
+    return (opts.get("host"), opts.get("user")) in {
+        ("db.hopleyvbxiuksxxucozg.supabase.co", "postgres"),
+        ("aws-0-eu-central-1.pooler.supabase.com", "postgres.hopleyvbxiuksxxucozg"),
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--send-authorized-test", action="store_true")
@@ -43,7 +55,7 @@ def main() -> None:
         from psycopg.conninfo import conninfo_to_dict
 
         opts = conninfo_to_dict(dsn)
-        if opts.get("host") != "db.hopleyvbxiuksxxucozg.supabase.co" or opts.get("sslmode") != "require":
+        if not _is_production_connection(opts):
             raise ValueError("Expected production database with SSL")
         target = InvitationTarget(email="highmarcus.eth@gmail.com", first_name="Marcus")
         with TrialInvitationProvider(audit_key) as provider:
