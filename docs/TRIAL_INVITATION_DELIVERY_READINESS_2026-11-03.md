@@ -8,6 +8,8 @@ The Render `RESEND_API_KEY` returned HTTP 401 for read-only domain, suppression,
 
 Local checks: the full API suite passed after the final provider/quota guard refinement (233 tests, one dependency deprecation warning). Frontend typecheck and production build passed with the existing local environment and network access for Google Fonts. The opt-out browser test passed on desktop, mobile, and tablet using installed Chrome. A full repository-wide Ruff run found two pre-existing unused imports in `routers/projects.py` and `schemas/releases.py`; focused lint on the changed invitation code passed. The new SQL has not yet been rehearsed on PostgreSQL 17, so this is not a production release approval.
 
+PR #7 CI run `41581673184` passed on implementation commit `bd25c0901e2f3711a631a0e1092ff39c1aeb2558`. An aggregate-only HTTPS read of production eligibility on November 3 found 22 Free owner candidates: 12 eligible, eight needing email confirmation, one already claimed, and one otherwise ineligible. All 12 eligible owners currently permit general email notifications. This still does **not** establish the final recipient count because Resend suppressions, dedicated promotional opt-outs, and email deduplication have not been verified against a deployed ledger.
+
 ## Prepared controls
 
 - Migration `0033_trial_invitation_delivery.sql` adds private, RLS-enabled delivery and promotional opt-out tables. Unique campaign/kind/owner and campaign/kind/email-digest indexes prevent duplicate reservations. It has not been applied.
