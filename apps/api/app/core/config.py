@@ -30,6 +30,10 @@ class Settings(BaseSettings):
     soundcharts_app_id: str = Field(default="", alias="SOUNDCHARTS_APP_ID")
     soundcharts_api_key: str = Field(default="", alias="SOUNDCHARTS_API_KEY")
     resend_api_key: str = Field(default="", alias="RESEND_API_KEY")
+    trial_invitation_signing_key: str = Field(default="", alias="TRIAL_INVITATION_SIGNING_KEY")
+    trial_invitation_sending_enabled: bool = Field(
+        default=False, alias="TRIAL_INVITATION_SENDING_ENABLED"
+    )
     email_from: str = Field(
         default="Gravity OS <notifications@gravityos.tech>", alias="EMAIL_FROM"
     )

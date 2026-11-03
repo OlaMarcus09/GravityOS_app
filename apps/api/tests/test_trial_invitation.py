@@ -11,6 +11,7 @@ def test_personalized_invitation_escapes_name_and_has_no_claim_link():
     assert 'No payment card is required' in email.text
     assert 'There are no automatic charges' in email.text
     assert 'existing data remains available' in email.text
+    assert 'Thank you for being one of the early GravityOS users' in email.text
 
 
 def test_neutral_greeting_and_unsubscribe_url_required():

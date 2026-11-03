@@ -13,7 +13,11 @@ from typing import Iterable
 CANDIDATE_SQL = """
 select u.id::text owner_id, w.id::text workspace_id, u.email,
        p.display_name, pref.email_enabled,
-       private.existing_user_trial_status(u.id, w.id, clock_timestamp()) reason
+       case when exists (
+         select 1 from private.trial_invitation_opt_outs o
+         where o.email_digest = extensions.digest(lower(btrim(u.email)), 'sha256')
+       ) then 'promotional_opt_out'
+       else private.existing_user_trial_status(u.id, w.id, clock_timestamp()) end reason
 from auth.users u
 join lateral (
     select w.id from public.workspaces w

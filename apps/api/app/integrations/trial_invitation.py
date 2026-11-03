@@ -37,6 +37,7 @@ def render_trial_invitation(*, first_name: str | None, unsubscribe_url: str) -> 
 <tr><td style="padding:28px 28px 10px"><div style="font-size:20px;font-weight:800;letter-spacing:-.02em">GravityOS</div></td></tr>
 <tr><td style="padding:12px 28px 28px"><p style="font-size:16px;line-height:1.6;margin:0 0 14px">Hi {safe_name},</p>
 <h1 style="font-size:28px;line-height:1.2;margin:0 0 16px">Your seven days of Pro are waiting 🎁</h1>
+<p style="font-size:16px;line-height:1.6;margin:0 0 14px">Thank you for being one of the early GravityOS users. We appreciate the trust you've placed in us while building your work here.</p>
 <p style="font-size:16px;line-height:1.6;margin:0 0 14px">You're invited to enjoy seven days of GravityOS Pro, free. Explore more room for your projects, catalogue, and release planning with the workspace you already use.</p>
 <p style="font-size:16px;line-height:1.6;margin:0 0 20px">Claim by <strong>November 15, 2026 at 11:59:59 PM WAT</strong>. Your full 168 hours begin only when you choose <strong>Claim My Trial</strong> in Plan &amp; Billing.</p>
 <p style="margin:0 0 20px"><a href="{cta}" style="display:inline-block;background:#164b38;color:#ffffff;text-decoration:none;font-weight:700;padding:14px 22px;border-radius:8px">Open Plan &amp; Billing</a></p>
@@ -44,6 +45,8 @@ def render_trial_invitation(*, first_name: str | None, unsubscribe_url: str) -> 
 </td></tr><tr><td style="padding:20px 28px 28px;border-top:1px solid #e3e9e2;font-size:12px;line-height:1.5;color:#52645a">This invitation was sent to an eligible GravityOS account owner. <a href="{opt_out}" style="color:#164b38">Unsubscribe from trial invitations</a>.</td></tr>
 </table></td></tr></table></body></html>'''
     text = (f"Hi {name},\n\nYour seven days of GravityOS Pro are waiting 🎁\n\n"
+            "Thank you for being one of the early GravityOS users. We appreciate the trust "
+            "you've placed in us while building your work here.\n\n"
             "You're invited to enjoy seven days of GravityOS Pro, free, with your existing workspace. "
             "Claim by November 15, 2026 at 11:59:59 PM WAT. Your full 168 hours begin only when "
             "you choose Claim My Trial in Plan & Billing.\n\n"
