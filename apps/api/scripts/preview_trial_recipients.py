@@ -10,6 +10,7 @@ from pathlib import Path
 import stat
 
 from app.jobs.trial_invitation_candidates import CANDIDATE_SQL, classify_candidates
+from scripts.send_trial_test_invitation import _is_production_connection
 
 
 def load_suppressions(path: Path | None) -> set[str] | None:
@@ -44,8 +45,8 @@ def main() -> None:
         import psycopg
         from psycopg.conninfo import conninfo_to_dict
         options = conninfo_to_dict(dsn)
-        if options.get('host') != 'db.hopleyvbxiuksxxucozg.supabase.co' or options.get('sslmode') != 'require':
-            raise ValueError('Expected the production PostgreSQL host with sslmode=require')
+        if not _is_production_connection(options):
+            raise ValueError('Expected the verified production PostgreSQL connection')
         suppressions = load_suppressions(args.suppression_snapshot)
         with psycopg.connect(dsn, connect_timeout=12,
                              options='-c default_transaction_read_only=on -c statement_timeout=30000') as conn:
