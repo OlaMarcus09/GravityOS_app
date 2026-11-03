@@ -31,6 +31,7 @@ from app.routers import (
     releases,
     streaming,
     tasks,
+    trial_invitation_opt_out,
     workspaces,
 )
 
@@ -167,6 +168,7 @@ def create_app() -> FastAPI:
         intelligence,
         billing,
         existing_trial,
+        trial_invitation_opt_out,
     ):
         v1.include_router(module.router)
     app.include_router(v1)

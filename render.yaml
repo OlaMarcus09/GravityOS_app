@@ -35,6 +35,10 @@ services:
         sync: false
       - key: RESEND_API_KEY
         sync: false
+      - key: TRIAL_INVITATION_SIGNING_KEY
+        sync: false
+      - key: TRIAL_INVITATION_SENDING_ENABLED
+        value: "false"
       - key: EMAIL_FROM
         value: Gravity OS <notifications@gravityos.tech>
       - key: EMAIL_REPLY_TO
