@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     trial_invitation_sending_enabled: bool = Field(
         default=False, alias="TRIAL_INVITATION_SENDING_ENABLED"
     )
+    trial_invitation_customer_batch_enabled: bool = Field(
+        default=False, alias="TRIAL_INVITATION_CUSTOMER_BATCH_ENABLED"
+    )
     email_from: str = Field(
         default="Gravity OS <notifications@gravityos.tech>", alias="EMAIL_FROM"
     )
