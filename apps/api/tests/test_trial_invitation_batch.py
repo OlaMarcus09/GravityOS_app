@@ -69,7 +69,7 @@ def test_prepared_resumes_but_attempted_and_uncertain_never_retry():
     delivery_id = uuid4()
     prepared = (str(OWNER), str(WORKSPACE), DIGEST, 'initial', 'prepared', delivery_id)
     assert preview(ledger=[prepared]).sendable[0].prepared_id == delivery_id
-    for state in ('attempting', 'accepted', 'delivered', 'rejected', 'uncertain'):
+    for state in ('attempting', 'accepted', 'delivered', 'failed', 'uncertain'):
         row = (str(OWNER), str(WORKSPACE), DIGEST, 'initial', state, delivery_id)
         assert preview(ledger=[row]).sendable == ()
 
