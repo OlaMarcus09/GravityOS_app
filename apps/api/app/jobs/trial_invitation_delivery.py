@@ -83,8 +83,18 @@ def prepare_invitation(conn: Any, target: InvitationTarget) -> tuple[UUID, UUID]
     """Reserve one unique owner/address/kind. Existing reservations never resend."""
     _validate_target(target)
     with conn.transaction():
+        conn.execute(
+            "select pg_advisory_xact_lock(hashtextextended(%s, 0))",
+            (target.digest.hex(),),
+        )
         if not _current_eligibility(conn, target):
             raise InvitationNotSendable("Recipient is no longer eligible")
+        if conn.execute(
+            """select 1 from private.trial_invitation_deliveries
+                where campaign = %s and email_digest = %s and state <> 'prepared'""",
+            (CAMPAIGN, target.digest),
+        ).fetchone():
+            return None
         row = conn.execute(
             """insert into private.trial_invitation_deliveries
                  (campaign, kind, owner_id, workspace_id, email_digest, eligibility_verified_at)
@@ -141,7 +151,13 @@ def deliver_prepared(
                 "select 1 from private.trial_invitation_opt_outs where email_digest = %s",
                 (target.digest,),
             ).fetchone()
-            if opted_out or not _current_eligibility(conn, target):
+            other_attempt = conn.execute(
+                """select 1 from private.trial_invitation_deliveries
+                    where campaign = %s and email_digest = %s and id <> %s
+                      and state <> 'prepared'""",
+                (CAMPAIGN, target.digest, delivery_id),
+            ).fetchone()
+            if opted_out or other_attempt or not _current_eligibility(conn, target):
                 raise InvitationNotSendable("Recipient is no longer eligible or has opted out")
             # Check Resend suppressions immediately before the external call.
             suppressed = provider.suppressed_digests()
