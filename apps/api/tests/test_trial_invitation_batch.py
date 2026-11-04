@@ -84,7 +84,7 @@ def test_scope_changes_when_recipient_changes_and_contains_no_address():
 
 
 def send(monkeypatch, *, enabled=True, batch_enabled=True, active=True,
-         count=1, scope=None, confirmation=None, quota_error=None):
+         count=1, scope=None, confirmation=None, quota_error=None, conn=None):
     current = preview(active=active)
     scope = scope or current.scope(KEY)
     monkeypatch.setattr(batch, 'preview_batch', lambda *_: current)
@@ -92,7 +92,7 @@ def send(monkeypatch, *, enabled=True, batch_enabled=True, active=True,
     if quota_error:
         p.verify_quota.side_effect = quota_error
     return batch.send_batch(
-        Mock(), p, Mock(), expected_count=count, expected_scope=scope,
+        conn or Mock(), p, Mock(), expected_count=count, expected_scope=scope,
         confirmation=confirmation or batch.confirmation_for(count, scope),
         scope_key=KEY, sending_enabled=enabled, batch_enabled=batch_enabled,
         sleep_fn=lambda _: None,
@@ -116,14 +116,36 @@ def test_quota_failure_prevents_reservation(monkeypatch):
 
 
 def test_partial_failure_stops_without_automatic_retry(monkeypatch):
-    monkeypatch.setattr(batch, 'prepare_invitation', lambda *_: (uuid4(), uuid4()))
+    delivery_id = uuid4()
+    monkeypatch.setattr(batch, 'prepare_invitation', lambda *_: (delivery_id, uuid4()))
     deliver = Mock(side_effect=TimeoutError('ambiguous provider response'))
     monkeypatch.setattr(batch, 'deliver_prepared', deliver)
-    result = send(monkeypatch)
+    conn = Mock()
+    conn.execute.return_value.fetchall.return_value = [(delivery_id, 'uncertain')]
+    result = send(monkeypatch, conn=conn)
     assert result['stopped'] is True
-    assert result['accepted_by_provider'] == 0
+    assert result['ledger_states'] == {'uncertain': 1}
+    assert 'accepted_by_provider' not in result
     assert deliver.call_count == 1
     assert 'ambiguous provider response' not in str(result)
+
+
+def test_success_reports_recorded_ledger_state_not_assumed_delivery(monkeypatch):
+    delivery_id = uuid4()
+    monkeypatch.setattr(batch, 'prepare_invitation', lambda *_: (delivery_id, uuid4()))
+    monkeypatch.setattr(batch, 'deliver_prepared', lambda *_args, **_kwargs: 'provider-id')
+    conn = Mock()
+    conn.execute.return_value.fetchall.return_value = [(delivery_id, 'accepted')]
+    result = send(monkeypatch, conn=conn)
+    assert result['ledger_states'] == {'accepted': 1}
+    assert 'delivered' not in result['ledger_states']
+
+
+def test_incomplete_ledger_cannot_generate_a_success_report():
+    conn = Mock()
+    conn.execute.return_value.fetchall.return_value = []
+    with pytest.raises(ValueError, match='incomplete'):
+        batch.ledger_states(conn, [uuid4()])
 
 
 def test_concurrent_reservation_conflict_stops_without_send(monkeypatch):

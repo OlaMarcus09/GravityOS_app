@@ -114,6 +114,20 @@ def confirmation_for(count: int, scope: str) -> str:
     return f"SEND {CAMPAIGN} initial {count} {scope}"
 
 
+def ledger_states(conn: Any, delivery_ids: list[UUID]) -> dict[str, int]:
+    """Report durable delivery states; a provider call alone proves nothing."""
+    if not delivery_ids:
+        return {}
+    rows = conn.execute(
+        """select id, state from private.trial_invitation_deliveries
+            where id = any(%s) and campaign = %s and kind = 'initial'""",
+        (delivery_ids, CAMPAIGN),
+    ).fetchall()
+    if {row[0] for row in rows} != set(delivery_ids):
+        raise ValueError('Delivery ledger is incomplete')
+    return dict(Counter(row[1] for row in rows))
+
+
 def send_batch(
     conn: Any,
     provider: TrialInvitationProvider,
@@ -139,7 +153,7 @@ def send_batch(
             or preview.scope(scope_key) != expected_scope):
         raise ValueError('Claim window or current recipient scope changed')
     provider.verify_quota(required=expected_count)
-    accepted = 0
+    delivery_ids: list[UUID] = []
     resumed = 0
     for index, item in enumerate(preview.sendable):
         try:
@@ -151,19 +165,18 @@ def send_batch(
                 delivery_id = reservation[0]
             else:
                 resumed += 1
+            delivery_ids.append(delivery_id)
             # Existing delivery code rechecks ownership, claims, preferences,
             # opt-outs, domain, quota and live suppressions immediately before
             # the provider call. The ledger lock allows only one attempt.
             deliver_prepared(conn, item.target, delivery_id, provider=provider, sender=sender)
-            accepted += 1
         except Exception:
-            return {"campaign": CAMPAIGN, "accepted_by_provider": accepted,
+            return {"campaign": CAMPAIGN, "ledger_states": ledger_states(conn, delivery_ids),
                     "resumed_prepared": resumed, "stopped": True,
-                    "remaining_unattempted": expected_count - index - 1,
+                    "not_processed_in_run": expected_count - index - 1,
                     "reason": "Inspect the private ledger and reconcile before any further run"}
         if index + 1 < expected_count:
             sleep_fn(MIN_INTERVAL_SECONDS)
-    return {"campaign": CAMPAIGN, "accepted_by_provider": accepted,
+    return {"campaign": CAMPAIGN, "ledger_states": ledger_states(conn, delivery_ids),
             "resumed_prepared": resumed, "stopped": False,
-            "remaining_unattempted": 0,
-            "delivery_verified": False}
+            "not_processed_in_run": 0}
