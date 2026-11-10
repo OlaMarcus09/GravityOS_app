@@ -39,6 +39,26 @@ test.describe("public and auth entry points", () => {
     await expect(page.locator("input[type=password]")).toHaveAttribute("autocomplete", "new-password");
   });
 
+  test("login offers a password reset without revealing account existence", async ({ page }) => {
+    await page.goto("/login");
+    await page.getByRole("link", { name: "Forgot password?" }).click();
+    await expect(page.getByRole("heading", { name: "Reset your password" })).toBeVisible();
+    let requestedRedirect = "";
+    await page.route("**/auth/v1/recover*", async (route) => {
+      requestedRedirect = new URL(route.request().url()).searchParams.get("redirect_to") ?? "";
+      await route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
+    });
+    await page.getByRole("textbox", { name: "Email" }).fill("person@example.test");
+    await page.getByRole("button", { name: "Send reset link" }).click();
+    await expect(page.getByRole("status")).toContainText("If an account uses that address");
+    expect(requestedRedirect).toBe(`${new URL(page.url()).origin}/reset-password`);
+  });
+
+  test("new password requires a verified recovery link", async ({ page }) => {
+    await page.goto("/reset-password");
+    await expect(page.getByRole("button", { name: "Save new password" })).toHaveCount(0);
+  });
+
   test("invite route explains an invalid or expired link", async ({ page }) => {
     await page.goto("/auth/invite");
     await expect(page.getByText(/invitation link is invalid|expired/i)).toBeVisible({ timeout: 10_000 });

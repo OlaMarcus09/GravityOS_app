@@ -70,7 +70,8 @@ function LoginForm() {
               required
             />
           </Field>
-          {error && <p style={{ color: "var(--danger)", margin: 0, fontSize: "0.85rem" }}>{error}</p>}
+          <Link href="/forgot-password" style={{ alignSelf: "flex-end", fontSize: "0.82rem" }}>Forgot password?</Link>
+          {error && <p role="alert" style={{ color: "var(--danger)", margin: 0, fontSize: "0.85rem" }}>{error}</p>}
           <Button type="submit" disabled={loading} style={{ width: "100%", marginTop: "0.25rem" }}>
             {loading ? "Logging in…" : "Log in"}
           </Button>

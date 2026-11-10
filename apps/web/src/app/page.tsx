@@ -1,232 +1,90 @@
 import Link from "next/link";
 
-import { Button, GravityMark } from "@/components/ui";
+import { GravityMark } from "@/components/ui";
 
-const TIERS = [
-  {
-    name: "Free",
-    price: "N0",
-    period: "forever",
-    description: "Get started and plan your first release.",
-    features: [
-      "1 active project",
-      "25 catalogue items",
-      "Tasks + Calendar",
-      "Basic dashboard",
-    ],
-    cta: "Get started",
-    href: "/signup",
-    highlighted: false,
-  },
-  {
-    name: "Pro",
-    price: "Coming soon",
-    period: "",
-    description: "Unlimited tools for the working creative.",
-    features: [
-      "Unlimited projects",
-      "Unlimited catalogue",
-      "Release planner",
-      "Budget planner",
-      "Marketing planner",
-      "Gravity Score",
-      "AI Manager",
-    ],
-    cta: "Join waitlist",
-    href: "/signup",
-    highlighted: true,
-  },
-  {
-    name: "Team",
-    price: "Coming soon",
-    period: "",
-    description: "For managers, labels, and creative agencies.",
-    features: [
-      "Everything in Pro",
-      "Multiple workspaces",
-      "Team permissions",
-      "Shared calendars",
-      "Approval workflows",
-    ],
-    cta: "Join waitlist",
-    href: "/signup",
-    highlighted: false,
-  },
+import { LaunchOffer } from "./launch-offer";
+import styles from "./landing.module.css";
+
+const CAPABILITIES = [
+  { number: "01", title: "Keep your work together", description: "Projects, tasks, and your catalogue live in one workspace, so the details stay close to the big picture." },
+  { number: "02", title: "Plan the next release", description: "Turn a release into a timeline of work, with budgets and marketing plans alongside it." },
+  { number: "03", title: "See what needs attention", description: "A focused dashboard and calendar help you keep moving without losing track of what comes next." },
 ];
 
-// Public landing — the brand's first impression. Space-themed hero over the
-// global starfield/nebula backdrop (globals.css), with the Gravity mark.
 export default function Home() {
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        padding: "4rem 1.5rem",
-      }}
-    >
-      {/* Hero */}
-      <section
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          textAlign: "center",
-          minHeight: "70vh",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", marginBottom: "2.5rem" }}>
-          <GravityMark size={38} />
-          <span style={{ fontFamily: "var(--font-display)", fontSize: "1.15rem", fontWeight: 600, letterSpacing: "-0.01em" }}>
-            Gravity OS
-          </span>
+    <main className={styles.page}>
+      <a className={styles.skipLink} href="#main-content">Skip to content</a>
+      <header className={styles.header}>
+        <Link className={styles.brand} href="/" aria-label="GravityOS home">
+          <GravityMark size={30} /><span>GravityOS</span>
+        </Link>
+        <nav className={styles.navigation} aria-label="Main navigation">
+          <a href="#how-it-works">How it works</a>
+          <a href="#features">Features</a>
+          <a href="#plans">Plans</a>
+        </nav>
+        <div className={styles.headerActions}>
+          <Link className={styles.loginLink} href="/login">Log in</Link>
+          <Link className={styles.smallButton} href="/signup">Get started <span aria-hidden="true">↗</span></Link>
         </div>
+      </header>
 
-        <p className="eyebrow" style={{ marginBottom: "1rem" }}>
-          The operating system for creative careers
-        </p>
-        <h1
-          style={{
-            fontSize: "clamp(2.4rem, 6vw, 4rem)",
-            lineHeight: 1.05,
-            maxWidth: 720,
-            marginBottom: "1.25rem",
-          }}
-        >
-          Build your creative career{" "}
-          <span
-            style={{
-              background: "linear-gradient(120deg, var(--accent), var(--cyan))",
-              WebkitBackgroundClip: "text",
-              backgroundClip: "text",
-              color: "transparent",
-            }}
-          >
-            in orbit
-          </span>
-        </h1>
-        <p style={{ color: "var(--muted)", fontSize: "1.05rem", maxWidth: 520, marginBottom: "2.5rem" }}>
-          Plan releases, organize your catalogue, manage budgets, and stay consistent —
-          all from one intelligent mission control.
-        </p>
-
-        <div style={{ display: "flex", gap: "0.85rem", flexWrap: "wrap", justifyContent: "center" }}>
-          <Link href="/signup">
-            <Button size="md">Get started</Button>
-          </Link>
-          <Link href="/login">
-            <Button variant="ghost" size="md">
-              Log in
-            </Button>
-          </Link>
+      <section className={styles.hero} id="main-content" aria-labelledby="hero-title">
+        <div className={styles.heroCopy}>
+          <p className={styles.kicker}><span className={styles.kickerDot} /> YOUR CREATIVE WORK, IN ONE PLACE</p>
+          <h1 id="hero-title">Make room for <span>your next big thing.</span></h1>
+          <p className={styles.lead}>From the first idea to the next release, GravityOS gives your projects, catalogue, plans, and daily work a place to move together.</p>
+          <div className={styles.heroActions}>
+            <Link className={styles.primaryButton} href="/signup">Create your free account <span aria-hidden="true">↗</span></Link>
+            <a className={styles.secondaryButton} href="#how-it-works">See how it works <span aria-hidden="true">↓</span></a>
+          </div>
+          <p className={styles.heroNote}>Start on Free · No card needed to get started</p>
         </div>
-      </section>
-
-      {/* Pricing */}
-      <section
-        id="pricing"
-        style={{
-          width: "100%",
-          maxWidth: 960,
-          padding: "4rem 0 2rem",
-        }}
-      >
-        <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
-          <p className="eyebrow" style={{ marginBottom: "0.75rem" }}>Pricing</p>
-          <h2 style={{ fontSize: "clamp(1.6rem, 4vw, 2.2rem)", margin: 0 }}>
-            Simple plans for every stage
-          </h2>
-          <p style={{ color: "var(--muted)", marginTop: "0.6rem", maxWidth: 480, marginLeft: "auto", marginRight: "auto" }}>
-            Start free. Upgrade when you need more power.
-          </p>
-        </div>
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-            gap: "1.25rem",
-          }}
-        >
-          {TIERS.map((tier) => (
-            <div
-              key={tier.name}
-              className="glass"
-              style={{
-                padding: "1.75rem 1.5rem",
-                display: "flex",
-                flexDirection: "column",
-                gap: "1rem",
-                border: tier.highlighted
-                  ? "1px solid var(--accent)"
-                  : "1px solid var(--border)",
-                boxShadow: tier.highlighted ? "var(--glow-accent)" : "var(--shadow)",
-                position: "relative",
-              }}
-            >
-              {tier.highlighted && (
-                <span
-                  style={{
-                    position: "absolute",
-                    top: "-0.65rem",
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    background: "linear-gradient(180deg, var(--accent-hover), var(--accent))",
-                    color: "#1a1205",
-                    fontSize: "0.68rem",
-                    fontWeight: 700,
-                    padding: "0.2rem 0.75rem",
-                    borderRadius: 999,
-                    letterSpacing: "0.04em",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Most popular
-                </span>
-              )}
-
-              <div>
-                <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.15rem", fontWeight: 600, margin: 0 }}>
-                  {tier.name}
-                </h3>
-                <p style={{ color: "var(--muted)", fontSize: "0.82rem", margin: "0.25rem 0 0" }}>
-                  {tier.description}
-                </p>
+        <div className={styles.previewFrame} aria-label="Illustrative preview of a GravityOS workspace">
+          <div className={styles.previewTop}><span className={styles.previewDots} aria-hidden="true">● ● ●</span><span>MISSION CONTROL</span><span>◌</span></div>
+          <div className={styles.previewBody}>
+            <aside className={styles.previewSide} aria-hidden="true"><div className={styles.previewSymbol}>G</div><span className={styles.previewSideActive}>◈</span><span>▤</span><span>◷</span><span>▧</span></aside>
+            <div className={styles.previewContent}>
+              <div className={styles.previewIntro}><div><span className={styles.previewLabel}>YOUR WORKSPACE</span><h2>Good things are in motion.</h2></div><span className={styles.previewDate}>A LOOK INSIDE</span></div>
+              <div className={styles.previewGrid}>
+                <div className={styles.previewFeature}><span className={styles.previewLabel}>CURRENT PROJECT</span><strong>Next release</strong><p>Give every step a place to land.</p><div className={styles.progressTrack}><div /></div><span className={styles.progressCaption}>Your plan, coming together</span></div>
+                <div className={styles.previewStat}><span className={styles.previewLabel}>UP NEXT</span><strong>3 priorities</strong><div className={styles.previewTask}><span>✓</span> Set the direction</div><div className={styles.previewTask}><span>○</span> Map the rollout</div><div className={styles.previewTask}><span>○</span> Share the work</div></div>
               </div>
-
-              <div style={{ display: "flex", alignItems: "baseline", gap: "0.3rem" }}>
-                <span style={{ fontFamily: "var(--font-display)", fontSize: "1.75rem", fontWeight: 600 }}>
-                  {tier.price}
-                </span>
-                {tier.period && (
-                  <span style={{ color: "var(--muted)", fontSize: "0.82rem" }}>/{tier.period}</span>
-                )}
-              </div>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", flex: 1 }}>
-                {tier.features.map((f) => (
-                  <div key={f} style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.85rem" }}>
-                    <span style={{ color: "var(--success)", fontWeight: 700, flexShrink: 0 }}>+</span>
-                    <span>{f}</span>
-                  </div>
-                ))}
-              </div>
-
-              <Link href={tier.href}>
-                <Button
-                  variant={tier.highlighted ? "primary" : "ghost"}
-                  style={{ width: "100%", marginTop: "0.5rem" }}
-                >
-                  {tier.cta}
-                </Button>
-              </Link>
+              <div className={styles.previewBottom}><span>PROJECTS</span><span>CATALOGUE</span><span>RELEASES</span><span>CALENDAR</span></div>
             </div>
-          ))}
+          </div>
+          <span className={styles.previewCaption}>An illustrative workspace preview</span>
         </div>
       </section>
+
+      <LaunchOffer />
+
+      <section id="how-it-works" className={styles.section} aria-labelledby="workflow-title">
+        <div className={styles.sectionHeading}><p className={styles.kicker}>A CLEARER WAY TO MOVE</p><h2 id="workflow-title">Your ideas deserve more than scattered tabs.</h2><p>Bring the work behind your creative career into one dependable rhythm.</p></div>
+        <div className={styles.stepGrid}>
+          <div><span>01 / ORGANIZE</span><h3>Start with the work</h3><p>Create a project and bring the tasks, notes, and assets around it into focus.</p></div>
+          <div><span>02 / PLAN</span><h3>See the path ahead</h3><p>Build your release plan, make space for your budget, and map the moments that matter.</p></div>
+          <div><span>03 / KEEP GOING</span><h3>Find your next move</h3><p>Use your dashboard and calendar to stay connected to what needs you today.</p></div>
+        </div>
+      </section>
+
+      <section id="features" className={styles.section} aria-labelledby="feature-title">
+        <div className={styles.sectionHeading}><p className={styles.kicker}>BUILT FOR THE WHOLE JOURNEY</p><h2 id="feature-title">Less switching. More making.</h2></div>
+        <div className={styles.featureGrid}>{CAPABILITIES.map((feature) => <article className={styles.featureCard} key={feature.number}><span>{feature.number}</span><h3>{feature.title}</h3><p>{feature.description}</p></article>)}</div>
+      </section>
+
+      <section id="plans" className={styles.section} aria-labelledby="plans-title">
+        <div className={styles.sectionHeading}><p className={styles.kicker}>ROOM TO GROW</p><h2 id="plans-title">Begin where you are.</h2><p>Start free and explore more when a trial is available to your account.</p></div>
+        <div className={styles.planGrid}>
+          <div className={styles.planCard}><p className={styles.planName}>FREE</p><h3>Get your ideas moving.</h3><p>One active project, 25 catalogue items, tasks, calendar, and a dashboard to get started.</p><strong>₦0 <span>/ forever</span></strong><Link className={styles.secondaryButton} href="/signup">Start free <span aria-hidden="true">↗</span></Link></div>
+          <div className={`${styles.planCard} ${styles.planCardPro}`}><p className={styles.planName}>PRO</p><h3>Give every plan more room.</h3><p>Unlimited projects and catalogue, plus release, budget, and marketing planning.</p><span className={styles.planDetail}>A seven-day trial is available to eligible accounts during the launch window. No payment card or automatic charge.</span><Link className={styles.primaryButton} href="/signup">Explore GravityOS <span aria-hidden="true">↗</span></Link></div>
+        </div>
+        <p className={styles.teamNote}>Working with a team? Shared workspaces and team tools are part of GravityOS too. Payment checkout is not available yet.</p>
+      </section>
+
+      <section className={styles.finalCta}><p className={styles.kicker}>READY WHEN YOU ARE</p><h2>Make the space to do your best work.</h2><p>Your next chapter starts with one place to plan it.</p><Link className={styles.primaryButton} href="/signup">Get started for free <span aria-hidden="true">↗</span></Link></section>
+      <footer className={styles.footer}><Link className={styles.brand} href="/"><GravityMark size={23} /><span>GravityOS</span></Link><span>Build with intention. Move with momentum.</span><Link href="/login">Log in</Link></footer>
     </main>
   );
 }
