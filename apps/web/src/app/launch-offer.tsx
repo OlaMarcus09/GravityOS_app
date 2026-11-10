@@ -29,7 +29,10 @@ export function LaunchOffer() {
         <p>Eligible new accounts can explore Pro, while eligible existing Free workspace owners can claim in Plan &amp; Billing. Your 168 hours start when your trial activates. No card and no automatic charge.</p>
         <span className={styles.offerFootnote}>Enrollment closes November 15, 2026 at 11:59:59 PM WAT. Existing data remains available after a trial ends.</span>
       </div>
-      <Link className={styles.primaryButton} href="/signup">Get started <span aria-hidden="true">↗</span></Link>
+      <div className={styles.offerActions}>
+        <Link className={styles.primaryButton} href="/signup">Create an account <span aria-hidden="true">↗</span></Link>
+        <Link className={styles.offerExisting} href="/settings">Already here? Claim in Plan &amp; Billing</Link>
+      </div>
     </section>
   );
 }

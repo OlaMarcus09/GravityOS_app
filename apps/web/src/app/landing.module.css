@@ -48,6 +48,9 @@
 .offer h2 { font-size: clamp(1.5rem,2.7vw,2.3rem); line-height: 1.2; margin: 0 0 8px; }
 .offer p { color: var(--muted); margin: 0; max-width: 660px; }
 .offer .kicker { margin-bottom: 8px; }
+.offerActions { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.offerExisting { color: var(--fg); font-size: .75rem; text-align: center; }
+.offerExisting:hover { color: var(--accent); }
 .offerFootnote { display: block; font-size: .73rem; margin-top: 8px; color: var(--muted-2); }
 .section { padding: clamp(90px, 10vw, 145px) 0 0; }
 .sectionHeading { max-width: 660px; margin-bottom: 40px; }
@@ -76,5 +79,5 @@
 .footer { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; border-top: 1px solid var(--border); padding: 27px 0 36px; color: var(--muted-2); font-size: .78rem; }
 .footer a:not(.brand) { color: var(--muted); }
 @media (max-width: 1050px) { .hero { grid-template-columns: 1fr; padding-top: 80px; } .heroCopy { max-width: 700px; } .previewFrame { max-width: 770px; width: 100%; margin: 0 auto; } }
-@media (max-width: 680px) { .page { padding: 0 18px; } .header { min-height: 70px; } .navigation, .loginLink { display: none; } .hero { padding: 72px 0 75px; gap: 42px; } .hero h1 { font-size: clamp(3.05rem, 12vw, 4.4rem); } .heroActions > a { width: 100%; } .previewFrame { transform: none; } .previewSide { width: 43px; } .previewContent { padding: 16px; } .previewGrid { grid-template-columns: 1fr; margin-top: 18px; } .previewFeature, .previewStat { min-height: 0; } .previewDate, .previewStat, .previewBottom { display: none; } .offer { flex-direction: column; align-items: stretch; } .offer > a { width: 100%; } .stepGrid, .featureGrid, .planGrid { grid-template-columns: 1fr; } .stepGrid { gap: 30px; } .section { padding-top: 90px; } .footer > span { order: 3; width: 100%; } }
+@media (max-width: 680px) { .page { padding: 0 18px; } .header { min-height: 70px; } .navigation, .loginLink { display: none; } .hero { padding: 72px 0 75px; gap: 42px; } .hero h1 { font-size: clamp(3.05rem, 12vw, 4.4rem); } .heroActions > a { width: 100%; } .previewFrame { transform: none; } .previewSide { width: 43px; } .previewContent { padding: 16px; } .previewGrid { grid-template-columns: 1fr; margin-top: 18px; } .previewFeature, .previewStat { min-height: 0; } .previewDate, .previewStat, .previewBottom { display: none; } .offer { flex-direction: column; align-items: stretch; } .offerActions, .offerActions > a { width: 100%; } .stepGrid, .featureGrid, .planGrid { grid-template-columns: 1fr; } .stepGrid { gap: 30px; } .section { padding-top: 90px; } .footer > span { order: 3; width: 100%; } }
 @media (prefers-reduced-motion: reduce) { .smallButton, .primaryButton, .secondaryButton { transition: none; } }
